@@ -56,6 +56,33 @@
     };
   }
 
+  /**
+   * Leading-edge throttle: runs immediately, then at most once per `ms`.
+   *
+   * Not interchangeable with debounce here. Gmail rewrites its DOM more or less
+   * continuously, so a trailing-edge debounce on a MutationObserver waits for a
+   * quiet period that may never arrive — the callback starves, and the UI only
+   * catches up on the fallback interval. Throttling reacts on the first
+   * mutation and stays bounded after that.
+   */
+  function throttle(fn, ms) {
+    let last = 0;
+    let timer = 0;
+    return (...args) => {
+      const wait = ms - (Date.now() - last);
+      if (wait <= 0) {
+        last = Date.now();
+        fn(...args);
+      } else if (!timer) {
+        timer = setTimeout(() => {
+          timer = 0;
+          last = Date.now();
+          fn(...args);
+        }, wait);
+      }
+    };
+  }
+
   function ago(iso) {
     if (!iso) return "";
     const secs = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -158,34 +185,51 @@
         ?? root;
   }
 
+  // Gmail's compose markup is unversioned and has changed under us more than
+  // once. Try progressively wider nets rather than trusting any single one.
+  const SUBJECT_SELECTORS = [
+    'input[name="subjectbox"]',
+    'input[aria-label="Subject"]',
+    'input[placeholder="Subject"]',
+  ];
+
   function readSubject(scope) {
-    const typed = scope.querySelector(SEL.subject)?.value?.trim();
-    if (typed) return typed;
+    // Scoped first; then document-wide, which is safe in practice because more
+    // than one compose window open at once is rare.
+    for (const root of [scope, document]) {
+      for (const selector of SUBJECT_SELECTORS) {
+        const value = root.querySelector(selector)?.value?.trim();
+        if (value) return value;
+      }
+    }
     // Inline replies have no subject field; they inherit the thread's.
     return document.querySelector("h2.hP")?.textContent?.trim() ?? "";
   }
 
   function readRecipients(scope) {
+    // The hidden inputs are authoritative and exist only inside a compose, so
+    // widening to the document can't drag in unrelated addresses.
+    for (const root of [scope, document]) {
+      const out = new Set();
+      root.querySelectorAll(SEL.recipientInputs).forEach((input) => {
+        String(input.value ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .forEach((addr) => out.add(addr));
+      });
+      if (out.size) return [...out];
+    }
+
+    // Chips are a scoped-only fallback: the same attributes appear on every
+    // sender in the thread list, so a document-wide sweep would invent
+    // recipients wholesale.
     const out = new Set();
-
-    // The hidden inputs are authoritative wherever they exist.
-    scope.querySelectorAll(SEL.recipientInputs).forEach((input) => {
-      String(input.value ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .forEach((addr) => out.add(addr));
-    });
-    if (out.size) return [...out];
-
-    // Otherwise read the chips — skipping anything inside the editor, since
-    // quoted replies carry the same attributes on the original sender.
     scope.querySelectorAll(SEL.recipientChips).forEach((el) => {
-      if (el.closest('div[role="textbox"]')) return;
+      if (el.closest('div[role="textbox"]')) return;  // quoted reply, not a recipient
       const addr = el.getAttribute("data-hovercard-id") || el.getAttribute("email");
       if (addr && addr.includes("@")) out.add(addr);
     });
-
     return [...out];
   }
 
@@ -380,20 +424,31 @@
     badge.title = `Kilroy — ${detail}`;
   }
 
-  let lastBeat = 0;
+  // Last known numbers per token. Gmail tears down and rebuilds thread DOM
+  // constantly, taking our badge with it. Without a cache the badge stays gone
+  // until the next network round trip completes, which is most of what made
+  // this feel sluggish — the data was already here, we just weren't drawing it.
+  const statsCache = new Map();
+  let lastFetch = 0;
+
+  /** Redraw from cache. Synchronous and cheap; safe on every mutation. */
+  function paintFromCache(rendered) {
+    for (const [token, img] of rendered) paintBadge(img, statsCache.get(token));
+  }
 
   /**
-   * Two jobs at once: tell the backend you're looking at these messages (so its
-   * own fetch of the pixel doesn't get counted as the recipient opening it),
-   * and paint the current numbers onto the thread.
+   * Tell the backend you're looking at these messages, so its own fetch of the
+   * pixel isn't counted as the recipient opening it, and refresh the numbers.
    */
-  async function pulse() {
+  async function pulse({ force = false } = {}) {
     if (document.hidden) return;
 
     const rendered = renderedTokens();
     if (!rendered.size) return;
-    if (Date.now() - lastBeat < 4_000) return;
-    lastBeat = Date.now();
+
+    paintFromCache(rendered);
+    if (!force && Date.now() - lastFetch < 1_500) return;
+    lastFetch = Date.now();
 
     const tokens = [...rendered.keys()];
 
@@ -411,38 +466,41 @@
       return !(account && from && from !== account);
     });
 
-    // Only claim a self-view when this tab is genuinely in front of you. A
-    // Gmail tab left open in a background window would otherwise suppress
-    // real opens for as long as it sat there.
+    // Both at once. These used to run in series, which doubled the wait for no
+    // benefit: note_self_view reaches back 20s to reclassify, so it doesn't
+    // need to land before the read to stay correct.
     //
-    // Order matters: claim the view before asking for numbers, so a proxy
-    // fetch racing us gets reclassified rather than counted.
-    if (document.hasFocus() && ours.length) {
-      await ask("selfView", { tokens: ours, threadId: currentThreadId() });
-    }
+    // Claim a self-view only when this tab is genuinely in front of you — a
+    // Gmail tab open in a background window would otherwise suppress real opens
+    // for as long as it sat there.
+    const [, stats] = await Promise.all([
+      document.hasFocus() && ours.length
+        ? ask("selfView", { tokens: ours, threadId: currentThreadId() })
+        : Promise.resolve(null),
+      ask("stats", { tokens }),
+    ]);
 
-    const stats = await ask("stats", { tokens });
-    if (!stats.ok) return;
-
-    const byToken = new Map((stats.rows ?? []).map((r) => [r.token, r]));
-    for (const [token, img] of rendered) paintBadge(img, byToken.get(token));
+    if (!stats?.ok) return;
+    for (const row of stats.rows ?? []) statsCache.set(row.token, row);
+    paintFromCache(renderedTokens());
   }
 
   // --------------------------------------------------------------- driver --
 
-  const scan = debounce(() => {
+  const scan = throttle(() => {
     document.querySelectorAll(SEL.composeBody).forEach((el) => {
       instrumentCompose(el).catch(() => {});
     });
     pulse().catch(() => {});
-  }, 400);
+  }, 250);
+
+  const pulseNow = () => pulse({ force: true }).catch(() => {});
 
   new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) scan();
-  });
-  window.addEventListener("hashchange", scan);
-  setInterval(() => pulse().catch(() => {}), 12_000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) pulseNow(); });
+  window.addEventListener("focus", pulseNow);
+  window.addEventListener("hashchange", pulseNow);
+  setInterval(() => pulse().catch(() => {}), 5_000);
 
   scan();
 })();
