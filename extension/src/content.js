@@ -25,7 +25,7 @@
     send: 'div[role="button"][data-tooltip^="Send"], div[role="button"][aria-label^="Send"], div.T-I.aoO[role="button"]',
     subject: 'input[name="subjectbox"]',
     recipientInputs: 'input[name="to"], input[name="cc"], input[name="bcc"]',
-    recipientChips: "[data-hovercard-id]",
+    recipientChips: "[data-hovercard-id], [email]",
   };
 
   const TOKEN_IN_URL = /\/px\/([A-Za-z0-9_-]{16,64})\.gif/;
@@ -129,12 +129,7 @@
     chip.className = "kilroy-chip";
     chip.setAttribute("role", "button");
     chip.setAttribute("tabindex", "0");
-
-    const dot = document.createElement("span");
-    dot.className = "kilroy-chip__dot";
-    const label = document.createElement("span");
-    label.className = "kilroy-chip__label";
-    chip.append(dot, label);
+    chip.textContent = "K";  // stands in for a real mark later
 
     send.parentElement.insertBefore(chip, send.nextSibling);
     return chip;
@@ -143,26 +138,51 @@
   function paintChip(chip, armed, note) {
     if (!chip) return;
     chip.dataset.armed = String(armed);
-    chip.querySelector(".kilroy-chip__label").textContent = armed ? "Tracking" : "Not tracked";
     chip.title = note ?? (armed
-      ? "Kilroy will tell you when this is opened. Click to turn off."
-      : "Click to track this message.");
+      ? "Kilroy is tracking this message. Click to turn off."
+      : "Kilroy is not tracking this message. Click to turn on.");
   }
 
-  function readRecipients(root) {
+  /**
+   * Where the subject and address fields actually live.
+   *
+   * composeRootFor() returns the nearest ancestor containing a Send button,
+   * which in Gmail's current compose is a toolbar wrapper *below* the header —
+   * so it holds the body and the Send button but not the subject or recipient
+   * rows. Reading fields from it silently yielded empty strings on every
+   * message. Scope field reads to the form or dialog instead.
+   */
+  function fieldScopeFor(bodyEl, root) {
+    return bodyEl.closest("form")
+        ?? bodyEl.closest('div[role="dialog"]')
+        ?? root;
+  }
+
+  function readSubject(scope) {
+    const typed = scope.querySelector(SEL.subject)?.value?.trim();
+    if (typed) return typed;
+    // Inline replies have no subject field; they inherit the thread's.
+    return document.querySelector("h2.hP")?.textContent?.trim() ?? "";
+  }
+
+  function readRecipients(scope) {
     const out = new Set();
 
-    root.querySelectorAll(SEL.recipientInputs).forEach((input) => {
+    // The hidden inputs are authoritative wherever they exist.
+    scope.querySelectorAll(SEL.recipientInputs).forEach((input) => {
       String(input.value ?? "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean)
         .forEach((addr) => out.add(addr));
     });
+    if (out.size) return [...out];
 
-    // Newer chip UI keeps the address on the chip itself.
-    root.querySelectorAll(SEL.recipientChips).forEach((chip) => {
-      const addr = chip.getAttribute("data-hovercard-id");
+    // Otherwise read the chips — skipping anything inside the editor, since
+    // quoted replies carry the same attributes on the original sender.
+    scope.querySelectorAll(SEL.recipientChips).forEach((el) => {
+      if (el.closest('div[role="textbox"]')) return;
+      const addr = el.getAttribute("data-hovercard-id") || el.getAttribute("email");
       if (addr && addr.includes("@")) out.add(addr);
     });
 
@@ -178,10 +198,11 @@
       // as a draft and let the sweeper collect it.
       if (!bodyEl.querySelector("img[data-kilroy]")) return;
       fired = true;
+      const scope = fieldScopeFor(bodyEl, root);
       ask("markSent", {
         token,
-        subject: root.querySelector(SEL.subject)?.value ?? "",
-        recipients: readRecipients(root),
+        subject: readSubject(scope),
+        recipients: readRecipients(scope),
         threadId: currentThreadId(),
       });
     };
@@ -300,11 +321,12 @@
     if (!badge) {
       badge = document.createElement("span");
       badge.className = "kilroy-badge";
-      const mark = document.createElement("span");
-      mark.className = "kilroy-badge__mark";
+      const k = document.createElement("span");
+      k.className = "kilroy-badge__k";
+      k.textContent = "K";
       const text = document.createElement("span");
       text.className = "kilroy-badge__text";
-      badge.append(mark, text);
+      badge.append(k, text);
       host.appendChild(badge);
     }
 
@@ -312,27 +334,34 @@
     const prefetches = Number(row?.prefetch_count ?? 0);
     const clicks = Number(row?.click_count ?? 0);
 
+    // On screen: the mark and a number. Everything else in the tooltip — this
+    // sits in a thread header you read every day.
     let state = "unopened";
-    let mark = "✓";
-    let text = "sent";
+    let short = "";
+    let detail = "Sent. No open recorded yet.";
 
     if (opens > 0) {
       state = "opened";
-      mark = "✓✓";
-      text = opens === 1 ? `opened ${ago(row.first_open_at)}` : `${opens} opens · ${ago(row.last_open_at)}`;
+      short = String(opens);
+      detail = opens === 1
+        ? `Opened ${ago(row.first_open_at)}.`
+        : `${opens} opens. First ${ago(row.first_open_at)}, last ${ago(row.last_open_at)}.`;
     } else if (prefetches > 0) {
       state = "prefetch";
-      text = "delivered — machine fetch only";
+      detail = "Delivered, but every fetch so far looks automated — a scanner or a privacy prefetch. Not evidence it was read.";
     }
 
-    if (clicks > 0) text += ` · ${clicks} click${clicks === 1 ? "" : "s"}`;
+    if (clicks > 0) {
+      short = short ? `${short}·${clicks}` : `0·${clicks}`;
+      detail += ` ${clicks} link click${clicks === 1 ? "" : "s"}.`;
+    }
+    if (prefetches > 0 && opens > 0) {
+      detail += ` ${prefetches} automated fetch${prefetches === 1 ? "" : "es"} discounted.`;
+    }
 
     badge.dataset.state = state;
-    badge.querySelector(".kilroy-badge__mark").textContent = mark;
-    badge.querySelector(".kilroy-badge__text").textContent = text;
-    badge.title = prefetches > 0 && opens > 0
-      ? `${prefetches} machine fetch(es) discounted — see docs/ACCURACY.md`
-      : "";
+    badge.querySelector(".kilroy-badge__text").textContent = short;
+    badge.title = `Kilroy — ${detail}`;
   }
 
   let lastBeat = 0;
@@ -351,11 +380,16 @@
     lastBeat = Date.now();
 
     const tokens = [...rendered.keys()];
-    const threadId = currentThreadId();
 
-    // Order matters: claim the view before asking for numbers, so a proxy fetch
-    // racing us gets reclassified rather than counted.
-    await ask("selfView", { tokens, threadId });
+    // Only claim a self-view when this tab is genuinely in front of you. A
+    // Gmail tab left open in a background window would otherwise suppress
+    // real opens for as long as it sat there.
+    //
+    // Order matters: claim the view before asking for numbers, so a proxy
+    // fetch racing us gets reclassified rather than counted.
+    if (document.hasFocus()) {
+      await ask("selfView", { tokens, threadId: currentThreadId() });
+    }
 
     const stats = await ask("stats", { tokens });
     if (!stats.ok) return;

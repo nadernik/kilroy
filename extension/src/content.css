@@ -1,89 +1,72 @@
-/* Kilroy in-Gmail chrome. Kept deliberately quiet — Gmail is a dense UI and a
-   loud badge in it gets old within a day. */
+/* Kilroy in-Gmail chrome.
+   Gmail is a dense UI you live in all day. Anything Kilroy adds has to be
+   ignorable at a glance and readable when you look straight at it. Detail
+   belongs in the tooltip, not on screen. */
 
+/* Compose-window toggle: a 20px "K" disc beside Send. */
 .kilroy-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 9px;
-  margin: 0 6px;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0 8px;
   border: 1px solid #dadce0;
-  border-radius: 12px;
-  background: #fff;
-  color: #5f6368;
-  font: 500 12px/1 "Google Sans", Roboto, Arial, sans-serif;
+  border-radius: 50%;
+  background: transparent;
+  color: #80868b;
+  font: 700 11px/1 "Google Sans", Roboto, Arial, sans-serif;
   cursor: pointer;
   user-select: none;
   vertical-align: middle;
-  transition: background 80ms ease, border-color 80ms ease;
+  flex: none;
+  transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
 }
 
-.kilroy-chip:hover {
-  background: #f1f3f4;
-  border-color: #c6c9cc;
-}
+.kilroy-chip:hover { border-color: #9aa0a6; color: #5f6368; }
 
 .kilroy-chip[data-armed="true"] {
-  border-color: #a8c7fa;
-  background: #e8f0fe;
-  color: #1967d2;
-}
-
-.kilroy-chip__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #9aa0a6;
-}
-
-.kilroy-chip[data-armed="true"] .kilroy-chip__dot {
   background: #1a73e8;
+  border-color: #1a73e8;
+  color: #fff;
 }
 
-/* Open-count badge shown on a sent message you're viewing. */
+.kilroy-chip[data-armed="true"]:hover { background: #1765cc; }
+
+/* Open-count marker on a sent message. */
 .kilroy-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-left: 8px;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: #e6f4ea;
-  color: #137333;
-  font: 500 11px/1.6 Roboto, Arial, sans-serif;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
-.kilroy-badge[data-state="unopened"] {
+  gap: 3px;
+  height: 16px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 8px;
   background: #f1f3f4;
-  color: #5f6368;
+  color: #80868b;
+  font: 600 10px/1 Roboto, Arial, sans-serif;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: default;
 }
 
-.kilroy-badge[data-state="prefetch"] {
-  background: #fef7e0;
-  color: #b06000;
-}
+.kilroy-badge__k { font-weight: 700; letter-spacing: .02em; }
 
-.kilroy-badge__mark {
-  font-size: 12px;
-  letter-spacing: -2px;
-}
+/* No count yet — don't leave the flex gap hanging. */
+.kilroy-badge__text:empty { display: none; }
+
+.kilroy-badge[data-state="opened"]   { background: #e6f4ea; color: #137333; }
+.kilroy-badge[data-state="prefetch"] { background: #fef7e0; color: #b06000; }
 
 @media (prefers-color-scheme: dark) {
-  .kilroy-chip {
-    background: #202124;
-    border-color: #3c4043;
-    color: #bdc1c6;
-  }
-  .kilroy-chip:hover { background: #292a2d; }
+  .kilroy-chip { border-color: #5f6368; color: #9aa0a6; }
+  .kilroy-chip:hover { border-color: #9aa0a6; color: #e8eaed; }
   .kilroy-chip[data-armed="true"] {
-    background: #1f3047;
-    border-color: #3b5b8c;
-    color: #8ab4f8;
+    background: #8ab4f8;
+    border-color: #8ab4f8;
+    color: #202124;
   }
-  .kilroy-badge { background: #1e3a29; color: #81c995; }
-  .kilroy-badge[data-state="unopened"] { background: #2a2b2e; color: #9aa0a6; }
+  .kilroy-badge { background: #2a2b2e; color: #9aa0a6; }
+  .kilroy-badge[data-state="opened"]   { background: #1e3a29; color: #81c995; }
   .kilroy-badge[data-state="prefetch"] { background: #3d3320; color: #fdd663; }
 }
