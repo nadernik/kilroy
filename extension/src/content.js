@@ -448,6 +448,16 @@
   const statsCache = new Map();
   let lastFetch = 0;
 
+  // Tokens whose self-view we've already reported this render.
+  //
+  // Gmail fetches a pixel ONCE, when the message renders — not repeatedly
+  // while you read. So one claim per render is all that's ever needed, and
+  // claiming continuously was actively destructive: every heartbeat reached
+  // back 20s and rewrote any genuine open that had landed in the meantime.
+  // Entries are dropped when a message leaves the screen, so returning to a
+  // thread (a fresh render, hence a fresh fetch) claims again.
+  const claimed = new Set();
+
   /** Redraw from cache. Synchronous and cheap; safe on every mutation. */
   function paintFromCache(rendered) {
     for (const [token, img] of rendered) paintBadge(img, statsCache.get(token));
@@ -483,16 +493,25 @@
       return !(account && from && from !== account);
     });
 
+    // Forget messages that have left the screen; seeing them again means a new
+    // render and a new fetch to account for.
+    for (const token of claimed) {
+      if (!rendered.has(token)) claimed.delete(token);
+    }
+
+    // Claim only what we haven't claimed yet, and only when this tab is
+    // genuinely in front of you — a Gmail tab open in a background window
+    // would otherwise suppress real opens for as long as it sat there.
+    const fresh = ours.filter((token) => !claimed.has(token));
+    const claiming = document.hasFocus() && fresh.length;
+    if (claiming) fresh.forEach((token) => claimed.add(token));
+
     // Both at once. These used to run in series, which doubled the wait for no
-    // benefit: note_self_view reaches back 20s to reclassify, so it doesn't
-    // need to land before the read to stay correct.
-    //
-    // Claim a self-view only when this tab is genuinely in front of you — a
-    // Gmail tab open in a background window would otherwise suppress real opens
-    // for as long as it sat there.
+    // benefit: note_self_view reaches back a few seconds to reclassify, so it
+    // doesn't need to land before the read to stay correct.
     const [, stats] = await Promise.all([
-      document.hasFocus() && ours.length
-        ? ask("selfView", { tokens: ours, threadId: currentThreadId() })
+      claiming
+        ? ask("selfView", { tokens: fresh, threadId: currentThreadId() })
         : Promise.resolve(null),
       ask("stats", { tokens }),
     ]);
