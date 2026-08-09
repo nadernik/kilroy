@@ -230,9 +230,19 @@ async function show() {
 
 $("go").addEventListener("click", async () => {
   const url = $("url").value.trim().replace(/\/+$/, "");
-  const anonKey = $("anon").value.trim();
+  const anonKey = $("anon").value.replace(/\s+/g, "");
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
     $("msg").textContent = "Project URL should look like https://xxxx.supabase.co";
+    return;
+  }
+  // Same trap as the extension: pasting the dashboard's masked preview puts a
+  // U+2026 in a header and fetch() fails with an unreadable encoding error.
+  if (/…|\.{3}/.test(anonKey)) {
+    $("msg").textContent = "That's the shortened preview of the key, not the key. Use the copy button beside it.";
+    return;
+  }
+  if (/[^A-Za-z0-9._-]/.test(anonKey)) {
+    $("msg").textContent = "The key has a stray character in it — re-copy it from the API settings page.";
     return;
   }
   cfg = { url, anonKey };

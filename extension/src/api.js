@@ -35,6 +35,28 @@ export async function setConfig({ url, anonKey }) {
   // a baffling "Invalid API key".
   const key = String(anonKey ?? "").replace(/\s+/g, "");
   if (!key) throw new Error("Anon key is required");
+
+  // The dashboard shows a shortened preview with a real U+2026 ellipsis in it.
+  // Paste that and fetch() dies with "String contains non ISO-8859-1 code
+  // point", because a header value can't hold it — which tells you nothing
+  // about what you actually did wrong.
+  if (/…|\.{3}/.test(key)) {
+    throw new Error(
+      "That's the dashboard's shortened preview of the key, not the key itself. " +
+      "Use the copy button beside it.",
+    );
+  }
+
+  // Supabase keys are base64url, plus dots in the legacy JWT form. Anything
+  // else is a stray character that came along with the paste.
+  const stray = key.match(/[^A-Za-z0-9._-]/);
+  if (stray) {
+    throw new Error(
+      `The key contains ${JSON.stringify(stray[0])}, which no Supabase key does. ` +
+      "Re-copy it straight from the API settings page.",
+    );
+  }
+
   if (/^sb_secret_/.test(key) || /"role":"service_role"/.test(atobSafe(key))) {
     throw new Error("That's the secret/service_role key. It bypasses row-level security — use the publishable (anon) key.");
   }
