@@ -24,7 +24,12 @@
     composeBody: 'div[role="textbox"][g_editable="true"]',
     send: 'div[role="button"][data-tooltip^="Send"], div[role="button"][aria-label^="Send"], div.T-I.aoO[role="button"]',
     subject: 'input[name="subjectbox"]',
-    recipientInputs: 'input[name="to"], input[name="cc"], input[name="bcc"]',
+    // Current Gmail has NO input[name="to"]. The address fields carry an
+    // aria-label and no name at all, which is why recipients came back empty
+    // on every message. Keep the named variants for older builds.
+    recipientInputs: 'input[name="to"], input[name="cc"], input[name="bcc"], ' +
+                     'input[aria-label="To recipients"], input[aria-label="Cc recipients"], ' +
+                     'input[aria-label="Bcc recipients"]',
     recipientChips: "[data-hovercard-id], [email]",
   };
 
@@ -180,9 +185,18 @@
    * message. Scope field reads to the form or dialog instead.
    */
   function fieldScopeFor(bodyEl, root) {
-    return bodyEl.closest("form")
-        ?? bodyEl.closest('div[role="dialog"]')
-        ?? root;
+    // Walk up until we reach something that actually holds the header fields.
+    // Measured against a live compose: the editor sits 16 levels below the
+    // container that has the subject, while the Send button turns up at 14 —
+    // hence the two-level gap that made every subject come back empty. There
+    // is no <form> and no role="dialog" anywhere on that path, so neither is
+    // usable as an anchor; only the presence of the fields themselves is.
+    let el = bodyEl;
+    for (let i = 0; i < 20 && el.parentElement; i++) {
+      el = el.parentElement;
+      if (el.querySelector(SEL.subject) || el.querySelector(SEL.recipientInputs)) return el;
+    }
+    return bodyEl.closest("form") ?? bodyEl.closest('div[role="dialog"]') ?? root;
   }
 
   // Gmail's compose markup is unversioned and has changed under us more than
@@ -191,6 +205,9 @@
     'input[name="subjectbox"]',
     'input[aria-label="Subject"]',
     'input[placeholder="Subject"]',
+    // Gmail's own hidden form field, mirrored from the visible box. Last
+    // resort: it can lag what you've typed, but it beats an empty string.
+    'input[name="subject"]',
   ];
 
   function readSubject(scope) {
