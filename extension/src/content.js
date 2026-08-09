@@ -307,6 +307,22 @@
     return found;
   }
 
+  /** Which Gmail account this tab is currently showing. */
+  function currentAccountEmail() {
+    for (const el of document.querySelectorAll('[aria-label*="@"]')) {
+      const found = /[\w.+-]+@[\w.-]+\.\w{2,}/.exec(el.getAttribute("aria-label") ?? "");
+      if (found) return found[0].toLowerCase();
+    }
+    return null;
+  }
+
+  /** Who sent the message this pixel belongs to. */
+  function senderOf(img) {
+    const item = img.closest('[role="listitem"]');
+    const addr = item?.querySelector("span[email], .gD")?.getAttribute("email");
+    return addr ? addr.toLowerCase() : null;
+  }
+
   function badgeHostFor(img) {
     const body = img.closest(".a3s");
     const item = (body ?? img).closest('[role="listitem"]');
@@ -381,14 +397,28 @@
 
     const tokens = [...rendered.keys()];
 
+    // Only the account that SENT a message may suppress its opens.
+    //
+    // This content script matches mail.google.com for every account you're
+    // signed into, not just the sending one. Read your own mail in a second
+    // Gmail account in the same browser and, without this check, that read
+    // cancels out the very open you were trying to observe. When we can
+    // identify both the viewer and the sender and they differ, we are the
+    // recipient here and must stay quiet.
+    const account = currentAccountEmail();
+    const ours = tokens.filter((token) => {
+      const from = senderOf(rendered.get(token));
+      return !(account && from && from !== account);
+    });
+
     // Only claim a self-view when this tab is genuinely in front of you. A
     // Gmail tab left open in a background window would otherwise suppress
     // real opens for as long as it sat there.
     //
     // Order matters: claim the view before asking for numbers, so a proxy
     // fetch racing us gets reclassified rather than counted.
-    if (document.hasFocus()) {
-      await ask("selfView", { tokens, threadId: currentThreadId() });
+    if (document.hasFocus() && ours.length) {
+      await ask("selfView", { tokens: ours, threadId: currentThreadId() });
     }
 
     const stats = await ask("stats", { tokens });
