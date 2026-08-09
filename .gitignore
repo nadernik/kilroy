@@ -1,0 +1,21 @@
+# --- secrets: never commit ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+supabase/.temp/
+supabase/.branches/
+
+# --- local config the user fills in ---
+extension/src/config.local.js
+dashboard/config.local.js
+
+# --- tooling ---
+node_modules/
+dist/
+build/
+*.zip
+.DS_Store
+Thumbs.db
+desktop.ini

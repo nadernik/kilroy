@@ -1,0 +1,10 @@
+project_id = "goiroqfjozzjgvlcbkhv"
+
+# Both endpoints are hit by mail clients that will never carry a JWT, so the
+# gateway must not demand one. Their protection is the unguessable token plus
+# the SECURITY DEFINER functions they are limited to calling.
+[functions.px]
+verify_jwt = false
+
+[functions.r]
+verify_jwt = false

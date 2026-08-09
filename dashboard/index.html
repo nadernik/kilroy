@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kilroy</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfa; --card: #fff; --fg: #1f1f1f; --muted: #6b6b6b;
+    --line: #e4e4e2; --accent: #1a73e8; --ok: #137333; --warn: #b06000; --bad: #c5221f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17181a; --card: #202124; --fg: #e8eaed; --muted: #9aa0a6;
+            --line: #33363a; --accent: #8ab4f8; --ok: #81c995; --warn: #fdd663; --bad: #f28b82; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 14px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+  h1 { font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+  label { display: block; font-weight: 500; margin: 12px 0 5px; font-size: 13px; }
+  input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px;
+          background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { margin-top: 16px; padding: 9px 18px; border: 0; border-radius: 7px;
+           background: var(--accent); color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
+  @media (prefers-color-scheme: dark) { button { color: #202124; } }
+  button.link { background: none; color: var(--accent); padding: 0; margin: 0;
+                font-weight: 400; font-size: 13px; }
+  .msg { margin-top: 12px; font-size: 13px; color: var(--bad); min-height: 19px; }
+  small { color: var(--muted); font-size: 12px; display: block; margin-top: 5px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+           gap: 12px; margin-bottom: 22px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 15px 17px; }
+  .tile .n { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+  .tile .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  table { width: 100%; border-collapse: collapse; min-width: 780px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); font-weight: 600; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .subject { font-weight: 500; max-width: 320px; }
+  .to { color: var(--muted); font-size: 12px; max-width: 320px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ok { color: var(--ok); font-weight: 500; }
+  .cold { color: var(--muted); }
+  .warn { color: var(--warn); }
+  .when { white-space: nowrap; color: var(--muted); font-size: 12px; }
+  .note { margin-top: 22px; color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Kilroy</h1>
+    <span class="lede" id="who"></span>
+  </header>
+  <p class="lede">Who opened what, and when.</p>
+
+  <div class="card" id="login">
+    <label for="url">Supabase project URL</label>
+    <input id="url" type="text" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
+    <label for="anon">Anon key</label>
+    <input id="anon" type="text" spellcheck="false" placeholder="eyJhbGciOi…">
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username">
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <small>Stored in this browser's localStorage only. Nothing is sent anywhere but your own project.</small>
+    <button id="go">Sign in</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="app" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th><th>To</th><th class="num">Opens</th>
+            <th>First open</th><th>Last open</th><th class="num">Clicks</th><th>Sent</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="note">
+      “Machine fetch” means something loaded the pixel that almost certainly wasn't a person —
+      a security scanner, Apple Mail's privacy prefetch, or your own client. Those are excluded
+      from the open counts. See <code>docs/ACCURACY.md</code>.
+      <button class="link" id="out">Sign out</button>
+    </p>
+  </div>
+</div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const LS = "kilroy.dashboard";
+
+let cfg = null;      // { url, anonKey }
+let session = null;  // { access_token, refresh_token, expires_at, email }
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS) ?? "null");
+    if (saved) { cfg = saved.cfg ?? null; session = saved.session ?? null; }
+  } catch { /* corrupt entry: start fresh */ }
+}
+function save() { localStorage.setItem(LS, JSON.stringify({ cfg, session })); }
+
+const now = () => Math.floor(Date.now() / 1000);
+
+async function auth(grant, body) {
+  const res = await fetch(`${cfg.url}/auth/v1/token?grant_type=${grant}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", apikey: cfg.anonKey },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error_description || data.msg || data.message || `Auth failed (${res.status})`);
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: data.expires_at ?? now() + (data.expires_in ?? 3600),
+    email: data.user?.email ?? null,
+  };
+}
+
+async function token() {
+  if (!session) return null;
+  if (session.expires_at - 60 > now()) return session.access_token;
+  session = await auth("refresh_token", { refresh_token: session.refresh_token });
+  save();
+  return session.access_token;
+}
+
+async function rest(path) {
+  const jwt = await token();
+  const res = await fetch(`${cfg.url}/rest/v1/${path}`, {
+    headers: { apikey: cfg.anonKey, authorization: `Bearer ${jwt}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message ?? `HTTP ${res.status}`);
+  return data;
+}
+
+const fmt = (iso) => iso ? new Date(iso).toLocaleString(undefined,
+  { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+
+function cell(row, text, cls) {
+  const td = document.createElement("td");
+  if (cls) td.className = cls;
+  td.textContent = text;
+  row.appendChild(td);
+  return td;
+}
+
+function tile(n, k) {
+  const el = document.createElement("div");
+  el.className = "tile";
+  const num = document.createElement("div"); num.className = "n"; num.textContent = n;
+  const key = document.createElement("div"); key.className = "k"; key.textContent = k;
+  el.append(num, key);
+  return el;
+}
+
+function render(rows) {
+  const sent = rows.length;
+  const opened = rows.filter((r) => Number(r.open_count) > 0).length;
+  const clicks = rows.reduce((a, r) => a + Number(r.click_count ?? 0), 0);
+  const rate = sent ? Math.round((opened / sent) * 100) : 0;
+
+  $("tiles").replaceChildren(
+    tile(sent, "tracked"),
+    tile(opened, "opened"),
+    tile(`${rate}%`, "open rate"),
+    tile(clicks, "clicks"),
+  );
+
+  const body = $("rows");
+  body.replaceChildren();
+
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    cell(tr, r.subject || "(no subject)", "subject");
+    cell(tr, (r.recipients ?? []).join(", ") || "—", "to");
+
+    const opens = Number(r.open_count ?? 0);
+    const pre = Number(r.prefetch_count ?? 0);
+    if (opens > 0) cell(tr, String(opens), "num ok");
+    else if (pre > 0) cell(tr, "machine fetch", "num warn");
+    else cell(tr, "—", "num cold");
+
+    cell(tr, fmt(r.first_open_at), "when");
+    cell(tr, fmt(r.last_open_at), "when");
+    cell(tr, String(r.click_count ?? 0), "num");
+    cell(tr, fmt(r.sent_at), "when");
+    body.appendChild(tr);
+  }
+
+  if (!rows.length) {
+    const tr = document.createElement("tr");
+    const td = cell(tr, "Nothing tracked yet.", "cold");
+    td.colSpan = 7;
+    body.appendChild(tr);
+  }
+}
+
+async function show() {
+  $("login").hidden = true;
+  $("app").hidden = false;
+  $("who").textContent = session?.email ?? "";
+  try {
+    render(await rest("message_stats?select=*&order=sent_at.desc&limit=500"));
+  } catch (err) {
+    $("app").hidden = true;
+    $("login").hidden = false;
+    $("msg").textContent = err.message;
+  }
+}
+
+$("go").addEventListener("click", async () => {
+  const url = $("url").value.trim().replace(/\/+$/, "");
+  const anonKey = $("anon").value.trim();
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
+    $("msg").textContent = "Project URL should look like https://xxxx.supabase.co";
+    return;
+  }
+  cfg = { url, anonKey };
+  $("msg").textContent = "Signing in…";
+  try {
+    session = await auth("password", { email: $("email").value.trim(), password: $("password").value });
+    $("password").value = "";
+    save();
+    $("msg").textContent = "";
+    await show();
+  } catch (err) {
+    $("msg").textContent = err.message;
+  }
+});
+
+$("out").addEventListener("click", () => {
+  session = null; save();
+  location.reload();
+});
+
+load();
+if (cfg) { $("url").value = cfg.url; $("anon").value = cfg.anonKey; }
+if (cfg && session) show();
+</script>
+</body>
+</html>

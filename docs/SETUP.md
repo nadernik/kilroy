@@ -1,0 +1,163 @@
+# Setup
+
+About fifteen minutes. Everything here fits inside Supabase's free tier.
+
+You need: a Google account using Gmail on the web, a Supabase account, Chrome (or
+any Chromium browser), and the [Supabase CLI](https://supabase.com/docs/guides/cli).
+
+---
+
+## 1. Create the Supabase project
+
+New project, any region near you. Save the database password somewhere — you'll
+want it eventually, though not for this walkthrough.
+
+From **Project Settings → API**, note two values:
+
+- **Project URL** — `https://<ref>.supabase.co`
+- **anon / publishable key** — a long `eyJ…` string
+
+The anon key is designed to be public. Row-level security is what protects your
+data. **Never** put the `service_role` key anywhere near the extension or the
+dashboard; it bypasses RLS entirely.
+
+## 2. Create your user
+
+**Authentication → Users → Add user → Create new user.** Use any email and
+password. Tick *Auto Confirm User* so you don't have to click a confirmation
+link.
+
+This is the account you'll sign into the extension with. Kilroy is multi-tenant
+by construction — RLS scopes everything to `auth.uid()` — so if you ever share
+the deployment, each person's data stays theirs.
+
+## 3. Run the schema
+
+**SQL Editor → New query.** Paste all of `supabase/migrations/0001_init.sql` and
+run it.
+
+That creates the tables, the RLS policies, the `message_stats` view, and the
+`record_open` / `record_click` / `note_self_view` functions.
+
+Verify:
+
+```sql
+select table_name from information_schema.tables
+where table_schema = 'public' order by 1;
+```
+
+You should see `link_clicks`, `links`, `message_stats`, `messages`, `opens`,
+`self_views`.
+
+## 4. Deploy the endpoints
+
+From the repo root:
+
+```bash
+supabase functions deploy px --project-ref YOUR_REF --no-verify-jwt
+```
+
+```bash
+supabase functions deploy r --project-ref YOUR_REF --no-verify-jwt
+```
+
+`--no-verify-jwt` is essential and not optional. These endpoints are hit by mail
+clients that will never carry a JWT; if the gateway demands one, no open is ever
+recorded. `supabase/config.toml` sets the same thing, so either mechanism works —
+belt and braces.
+
+Check it:
+
+```bash
+curl -sS -D - -o /dev/null https://YOUR_REF.supabase.co/functions/v1/px/TESTtoken123456789.gif
+```
+
+You want `200`, `content-type: image/gif`, and `cache-control: no-store…`. An
+unknown token still returns a valid image and logs nothing — a tracking pixel
+that 404s is a tracking pixel that announces itself.
+
+## 5. Load the extension
+
+1. `chrome://extensions`
+2. Turn on **Developer mode** (top right)
+3. **Load unpacked** → select the `extension/` folder
+
+Publishing to the Chrome Web Store is optional and costs a one-time $5 developer
+registration. Loading unpacked is free and works indefinitely; the only cost is a
+"Developer mode extensions" nag on each browser start.
+
+## 6. Point it at your project
+
+Click the Kilroy icon → **Settings**, or right-click the icon → *Options*.
+
+- Paste your **Project URL** and **anon key**, save
+- Sign in with the user from step 2
+- Leave **Track opens** on. **Track link clicks** is off by default — it rewrites
+  hrefs, so recipients see a `supabase.co` URL on hover. Turn it on when you want
+  the stronger signal and don't mind that.
+
+## 7. Try it
+
+Reload Gmail. Open a compose window — a **Tracking** chip appears next to Send.
+Click it to disarm for that one message.
+
+Send yourself a message from another account. Open it. Within a few seconds the
+sent copy in your thread shows `✓✓ opened just now`.
+
+If you open your *own* sent message, that should **not** count — the extension
+tells the backend you're looking, and the hit is filed as `self`. That mechanism
+working is the difference between a useful tracker and a noise generator.
+
+## 8. The dashboard
+
+`dashboard/index.html` is a single file with no build step and no dependencies.
+Open it straight from disk, or host it anywhere static (Cloudflare Pages, GitHub
+Pages, Vercel — all free). Enter the same URL, anon key, and login.
+
+---
+
+## Optional: sweep abandoned drafts
+
+Every compose window you open and then discard leaves a `draft` row. They're
+invisible and tiny, but if you want them gone automatically, enable `pg_cron` in
+**Database → Extensions** and schedule:
+
+```sql
+select cron.schedule('kilroy-purge', '0 4 * * *', $$select public.purge_stale_drafts()$$);
+```
+
+Or just run `select public.purge_stale_drafts();` when you think of it.
+
+## Optional: a nicer pixel URL
+
+`https://<ref>.supabase.co/functions/v1/px/<token>.gif` works fine, but it's long
+and it names your backend.
+
+Supabase custom domains are a paid add-on. The free route is a Cloudflare Worker
+on a domain you own (~$10/yr for the domain, Workers free tier covers the
+traffic) that proxies `img.yourdomain.com/i/<token>.gif` to the Edge Function.
+Set `X-Forwarded-For` through so open classification keeps working, then change
+the base URL in the extension options.
+
+## Free-tier caveat worth knowing
+
+Supabase pauses free projects after **7 days with no activity**. A paused project
+means pixels stop recording, silently. Ordinary use keeps it awake; a fortnight's
+holiday might not. If you go quiet for a while, check the project is still
+`ACTIVE_HEALTHY` before trusting a run of zeroes.
+
+## Troubleshooting
+
+**No chip in the compose window.** Reload Gmail after loading the extension.
+Check `chrome://extensions` for content-script errors — Gmail's DOM shifts and
+selectors in `content.js` occasionally need adjusting.
+
+**Chip says "Not signed in".** Options → sign in. The session refreshes itself,
+but a password change invalidates it.
+
+**Opens never appear.** Confirm the function was deployed with `--no-verify-jwt`
+and curl it as in step 4. Then check the function logs in the dashboard.
+
+**Everything shows as `self` or `prefetch`.** Working as designed, probably —
+query the `opens` table directly and read the `reason` column, then see
+[ACCURACY.md](ACCURACY.md) for how to retune the windows.

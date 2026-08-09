@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Kilroy</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #fff; --fg: #202124; --muted: #5f6368; --line: #e8eaed;
+      --accent: #1a73e8; --ok: #137333; --warn: #b06000;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --line: #3c4043;
+              --accent: #8ab4f8; --ok: #81c995; --warn: #fdd663; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; width: 390px; max-height: 520px; overflow-y: auto;
+      background: var(--bg); color: var(--fg);
+      font: 13px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 15px; border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; background: var(--bg);
+    }
+    header strong { font-size: 14px; }
+    header a { color: var(--accent); text-decoration: none; font-size: 12px; }
+    header a:hover { text-decoration: underline; }
+    .empty { padding: 32px 20px; text-align: center; color: var(--muted); }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { padding: 11px 15px; border-bottom: 1px solid var(--line); }
+    .subject {
+      font-weight: 500; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; margin-bottom: 2px;
+    }
+    .to { color: var(--muted); font-size: 12px; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+    .stat { margin-top: 5px; font-size: 12px; display: flex; gap: 9px; flex-wrap: wrap; }
+    .stat b { font-weight: 500; }
+    .opened { color: var(--ok); }
+    .cold { color: var(--muted); }
+    .machine { color: var(--warn); }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Kilroy</strong>
+    <a href="#" id="settings">Settings</a>
+  </header>
+  <div id="body"><div class="empty">Loading…</div></div>
+<script type="module" src="src/popup.js"></script>
+</body>
+</html>

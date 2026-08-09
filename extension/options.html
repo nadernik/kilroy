@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Kilroy settings</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #fff; --fg: #202124; --muted: #5f6368; --line: #dadce0;
+      --accent: #1a73e8; --ok: #137333; --bad: #c5221f; --field: #fff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --line: #3c4043;
+        --accent: #8ab4f8; --ok: #81c995; --bad: #f28b82; --field: #292a2d;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 40px 24px; background: var(--bg); color: var(--fg);
+      font: 14px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    main { max-width: 620px; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+         color: var(--muted); margin: 36px 0 12px; font-weight: 600; }
+    p.lede { color: var(--muted); margin: 0 0 8px; }
+    label { display: block; font-weight: 500; margin: 14px 0 5px; }
+    input[type=text], input[type=email], input[type=password], textarea {
+      width: 100%; padding: 9px 11px; border: 1px solid var(--line);
+      border-radius: 7px; background: var(--field); color: var(--fg);
+      font: inherit; font-size: 13px;
+    }
+    textarea { resize: vertical; min-height: 68px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+    input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+    small { color: var(--muted); display: block; margin-top: 5px; font-size: 12px; }
+    button {
+      margin-top: 16px; padding: 9px 18px; border: 0; border-radius: 7px;
+      background: var(--accent); color: #fff; font: inherit; font-weight: 500; cursor: pointer;
+    }
+    @media (prefers-color-scheme: dark) { button { color: #202124; } }
+    button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+    button:disabled { opacity: .5; cursor: default; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .toggle { display: flex; gap: 11px; align-items: flex-start; margin: 14px 0; }
+    .toggle input { margin-top: 4px; width: 16px; height: 16px; flex: none; }
+    .toggle span { font-weight: 500; }
+    .msg { margin-top: 14px; font-size: 13px; min-height: 20px; }
+    .msg.ok { color: var(--ok); }
+    .msg.bad { color: var(--bad); }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+    code { background: var(--field); padding: 1px 5px; border-radius: 4px;
+           font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Kilroy</h1>
+  <p class="lede">Email open tracking that reports to your Supabase project and nobody else's.</p>
+
+  <h2>Supabase project</h2>
+  <label for="url">Project URL</label>
+  <input id="url" type="text" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false" autocomplete="off">
+
+  <label for="anon">Anon (publishable) key</label>
+  <textarea id="anon" spellcheck="false" autocomplete="off" placeholder="eyJhbGciOi..."></textarea>
+  <small>
+    Both are on your project's <em>API Settings</em> page. The anon key is meant to be
+    public — row-level security is what protects your data, not this key. Never paste
+    the <code>service_role</code> key here.
+  </small>
+  <button id="saveConfig">Save project</button>
+  <div class="msg" id="configMsg"></div>
+
+  <h2>Account</h2>
+  <div id="signedOut">
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username">
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <small>The user you created under Authentication → Users in Supabase.</small>
+    <button id="signIn">Sign in</button>
+  </div>
+  <div id="signedIn" hidden>
+    <p>Signed in as <strong id="who"></strong></p>
+    <button id="signOut" class="secondary">Sign out</button>
+  </div>
+  <div class="msg" id="authMsg"></div>
+
+  <h2>Tracking</h2>
+  <div class="toggle">
+    <input id="trackPixel" type="checkbox">
+    <label for="trackPixel" style="margin:0">
+      <span>Track opens</span>
+      <small>Adds an invisible 1&times;1 image to messages you compose. Toggle it per-message from the chip next to Send.</small>
+    </label>
+  </div>
+  <div class="toggle">
+    <input id="trackLinks" type="checkbox">
+    <label for="trackLinks" style="margin:0">
+      <span>Track link clicks</span>
+      <small>
+        Rewrites links in your outgoing mail so clicks are recorded. A click is far more
+        reliable than an open — but the recipient sees a supabase.co URL when hovering,
+        which is why this is off by default.
+      </small>
+    </label>
+  </div>
+  <div class="msg" id="settingsMsg"></div>
+
+  <hr>
+  <p><small>
+    Opens are inferred from images being fetched, and a lot of things fetch images that
+    aren't people. Read <code>docs/ACCURACY.md</code> before trusting any single number.
+  </small></p>
+</main>
+<script type="module" src="src/options.js"></script>
+</body>
+</html>
