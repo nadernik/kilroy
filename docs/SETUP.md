@@ -96,6 +96,34 @@ Click the Kilroy icon → **Settings**, or right-click the icon → *Options*.
   hrefs, so recipients see a `supabase.co` URL on hover. Turn it on when you want
   the stronger signal and don't mind that.
 
+### Copying the key without corrupting it
+
+Sounds trivial. It isn't — there are three distinct ways to get this wrong, and
+each fails with an error that points somewhere else:
+
+- **Selecting the key text in the dashboard** copies its *masked* form. The mask
+  is made of U+00B7 middle dots. Use the **copy icon** beside the key, not
+  select-and-copy.
+- **Piping the CLI through a non-UTF-8 console** mangles those same bytes: UTF-8
+  `0xC2 0xB7` decoded as CP850 becomes `┬·`, so a box-drawing character lands
+  inside your key.
+- **Grabbing the wrong key.** The page offers four. `sb_secret_…` and
+  `service_role` bypass row-level security entirely and must never go in the
+  extension. Kilroy rejects both on sight.
+
+A bad key surfaces as `Invalid API key`, or — if it carries a non-Latin-1
+character — as `Failed to read the 'headers' property from 'RequestInit': String
+contains non ISO-8859-1 code point`, since HTTP headers can't hold one. Kilroy
+now checks for all of these when you save, so you get a real explanation instead.
+
+On Windows, `tools/copy-key.ps1` handles it: forces UTF-8, picks the key by its
+`type` field rather than by pattern-matching text, and refuses to touch the
+clipboard unless what it got is clean printable ASCII.
+
+```powershell
+.\tools\copy-key.ps1
+```
+
 ## 7. Try it
 
 Reload Gmail. Open a compose window — a **Tracking** chip appears next to Send.
