@@ -30,8 +30,24 @@ export async function setConfig({ url, anonKey }) {
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(clean)) {
     throw new Error("Project URL should look like https://xxxx.supabase.co");
   }
-  if (!String(anonKey ?? "").trim()) throw new Error("Anon key is required");
-  await store.set({ config: { url: clean, anonKey: String(anonKey).trim() } });
+  // Keys never contain whitespace, but copying one out of the dashboard often
+  // wraps it across lines. Strip rather than let it through and fail later with
+  // a baffling "Invalid API key".
+  const key = String(anonKey ?? "").replace(/\s+/g, "");
+  if (!key) throw new Error("Anon key is required");
+  if (/^sb_secret_/.test(key) || /"role":"service_role"/.test(atobSafe(key))) {
+    throw new Error("That's the secret/service_role key. It bypasses row-level security — use the publishable (anon) key.");
+  }
+  await store.set({ config: { url: clean, anonKey: key } });
+}
+
+/** Best-effort peek at a JWT payload, purely to catch a pasted service key. */
+function atobSafe(token) {
+  try {
+    return atob((token.split(".")[1] ?? "").replace(/-/g, "+").replace(/_/g, "/"));
+  } catch {
+    return "";
+  }
 }
 
 async function requireConfig() {
@@ -86,6 +102,14 @@ async function authRequest(cfg, grantType, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // Worth separating: this one is about the project key, not your password,
+    // and the stock message sends people hunting for the wrong problem.
+    if (res.status === 401 || /invalid api key/i.test(data.message ?? "")) {
+      throw new Error(
+        "Supabase rejected the API key — this is not about your password. " +
+        "Check the key came from this project's API settings and wasn't truncated.",
+      );
+    }
     throw new Error(
       data.error_description || data.msg || data.message || `Auth failed (${res.status})`,
     );
