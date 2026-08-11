@@ -1,119 +1,259 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Kilroy settings</title>
-  <style>
+<meta charset="utf-8">
+<title>Kilroy setup</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfa; --card: #fff; --fg: #1f1f1f; --muted: #6b6b6b;
+    --line: #e4e4e2; --accent: #1a73e8; --ok: #137333; --bad: #c5221f;
+    --warn: #b06000; --field: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
     :root {
-      color-scheme: light dark;
-      --bg: #fff; --fg: #202124; --muted: #5f6368; --line: #dadce0;
-      --accent: #1a73e8; --ok: #137333; --bad: #c5221f; --field: #fff;
+      --bg: #17181a; --card: #202124; --fg: #e8eaed; --muted: #9aa0a6;
+      --line: #33363a; --accent: #8ab4f8; --ok: #81c995; --bad: #f28b82;
+      --warn: #fdd663; --field: #292a2d;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --line: #3c4043;
-        --accent: #8ab4f8; --ok: #81c995; --bad: #f28b82; --field: #292a2d;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 40px 24px; background: var(--bg); color: var(--fg);
-      font: 14px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    }
-    main { max-width: 620px; margin: 0 auto; }
-    h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
-    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
-         color: var(--muted); margin: 36px 0 12px; font-weight: 600; }
-    p.lede { color: var(--muted); margin: 0 0 8px; }
-    label { display: block; font-weight: 500; margin: 14px 0 5px; }
-    input[type=text], input[type=email], input[type=password], textarea {
-      width: 100%; padding: 9px 11px; border: 1px solid var(--line);
-      border-radius: 7px; background: var(--field); color: var(--fg);
-      font: inherit; font-size: 13px;
-    }
-    textarea { resize: vertical; min-height: 68px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
-    input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-    small { color: var(--muted); display: block; margin-top: 5px; font-size: 12px; }
-    button {
-      margin-top: 16px; padding: 9px 18px; border: 0; border-radius: 7px;
-      background: var(--accent); color: #fff; font: inherit; font-weight: 500; cursor: pointer;
-    }
-    @media (prefers-color-scheme: dark) { button { color: #202124; } }
-    button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
-    button:disabled { opacity: .5; cursor: default; }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .toggle { display: flex; gap: 11px; align-items: flex-start; margin: 14px 0; }
-    .toggle input { margin-top: 4px; width: 16px; height: 16px; flex: none; }
-    .toggle span { font-weight: 500; }
-    .msg { margin-top: 14px; font-size: 13px; min-height: 20px; }
-    .msg.ok { color: var(--ok); }
-    .msg.bad { color: var(--bad); }
-    hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
-    code { background: var(--field); padding: 1px 5px; border-radius: 4px;
-           font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
-  </style>
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 44px 24px 90px; background: var(--bg); color: var(--fg);
+    font: 14px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  main { max-width: 680px; margin: 0 auto; }
+
+  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .mark {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+    color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px;
+  }
+  @media (prefers-color-scheme: dark) { .mark { color: #202124; } }
+  h1 { font-size: 21px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 30px 42px; }
+
+  .step {
+    position: relative; padding: 0 0 22px 42px; border-left: 2px solid var(--line);
+    margin-left: 14px;
+  }
+  .step:last-of-type { border-left-color: transparent; }
+  .dot {
+    position: absolute; left: -11px; top: 1px; width: 20px; height: 20px;
+    border-radius: 50%; border: 2px solid var(--line); background: var(--bg);
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    color: var(--muted);
+  }
+  .step[data-state="ok"]   .dot { border-color: var(--ok);  color: var(--ok);  }
+  .step[data-state="bad"]  .dot { border-color: var(--bad); color: var(--bad); }
+  .step[data-state="busy"] .dot { border-color: var(--accent); color: var(--accent); }
+
+  .step h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+  .status { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  .step[data-state="ok"]  .status { color: var(--ok); }
+  .step[data-state="bad"] .status { color: var(--bad); }
+
+  .body { background: var(--card); border: 1px solid var(--line);
+          border-radius: 10px; padding: 16px; margin-top: 10px; }
+
+  label { display: block; font-weight: 500; margin: 10px 0 4px; font-size: 13px; }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=email], input[type=password] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--field); color: var(--fg); font: inherit; font-size: 13px;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  small { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  button {
+    padding: 8px 15px; border: 0; border-radius: 6px; background: var(--accent);
+    color: #fff; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  @media (prefers-color-scheme: dark) { button { color: #202124; } }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: default; }
+  .actions { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+
+  .copyrow { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  code.url {
+    flex: 1; background: var(--field); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 10px; font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; overflow-x: auto; white-space: nowrap;
+  }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;
+         background: var(--field); padding: 1px 4px; border-radius: 3px; }
+
+  ol.mini { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  ol.mini li { margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  .toggle { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; }
+  .toggle input { margin-top: 3px; width: 15px; height: 15px; flex: none; }
+  .toggle b { font-weight: 500; font-size: 13px; }
+
+  .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .msg.bad { color: var(--bad); }
+  .msg.ok  { color: var(--ok); }
+
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
+    border-top: 1px solid var(--line); padding: 12px 24px;
+    display: flex; justify-content: center; gap: 12px; align-items: center;
+  }
+  .bar .summary { font-size: 13px; color: var(--muted); }
+</style>
 </head>
 <body>
 <main>
-  <h1>Kilroy</h1>
-  <p class="lede">Email open tracking that reports to your Supabase project and nobody else's.</p>
+  <div class="head"><div class="mark">K</div><h1>Kilroy</h1></div>
+  <p class="lede">Know when your Gmail is opened, using a database only you can read.</p>
 
-  <h2>Supabase project</h2>
-  <label for="url">Project URL</label>
-  <input id="url" type="text" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false" autocomplete="off">
-
-  <label for="anon">Anon (publishable) key</label>
-  <textarea id="anon" spellcheck="false" autocomplete="off" placeholder="eyJhbGciOi..."></textarea>
-  <small>
-    Both are on your project's <em>API Settings</em> page. The anon key is meant to be
-    public — row-level security is what protects your data, not this key. Never paste
-    the <code>service_role</code> key here.
-  </small>
-  <button id="saveConfig">Save project</button>
-  <div class="msg" id="configMsg"></div>
-
-  <h2>Account</h2>
-  <div id="signedOut">
-    <label for="email">Email</label>
-    <input id="email" type="email" autocomplete="username">
-    <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password">
-    <small>The user you created under Authentication → Users in Supabase.</small>
-    <button id="signIn">Sign in</button>
-  </div>
-  <div id="signedIn" hidden>
-    <p>Signed in as <strong id="who"></strong></p>
-    <button id="signOut" class="secondary">Sign out</button>
-  </div>
-  <div class="msg" id="authMsg"></div>
-
-  <h2>Tracking</h2>
-  <div class="toggle">
-    <input id="trackPixel" type="checkbox">
-    <label for="trackPixel" style="margin:0">
-      <span>Track opens</span>
-      <small>Adds an invisible 1&times;1 image to messages you compose. Toggle it per-message from the chip next to Send.</small>
-    </label>
-  </div>
-  <div class="toggle">
-    <input id="trackLinks" type="checkbox">
-    <label for="trackLinks" style="margin:0">
-      <span>Track link clicks</span>
+  <!-- 1 -->
+  <section class="step" id="step-project" data-state="busy">
+    <div class="dot">1</div>
+    <h2>Connect your Supabase project</h2>
+    <p class="status" data-status>Checking…</p>
+    <div class="body">
+      <label for="url">Project URL</label>
+      <input id="url" type="text" spellcheck="false" autocomplete="off"
+             placeholder="https://xxxxxxxx.supabase.co">
+      <label for="anon">Publishable (anon) key</label>
+      <input id="anon" type="text" spellcheck="false" autocomplete="off" placeholder="sb_publishable_…">
       <small>
-        Rewrites links in your outgoing mail so clicks are recorded. A click is far more
-        reliable than an open — but the recipient sees a supabase.co URL when hovering,
-        which is why this is off by default.
+        Both live under <em>Project Settings → API</em>. Use the <strong>copy button</strong> beside
+        the key — selecting the text copies a shortened preview that won't work.
+        Never paste a <code>secret</code> or <code>service_role</code> key here; those bypass
+        row-level security and Kilroy will refuse them.
       </small>
-    </label>
-  </div>
-  <div class="msg" id="settingsMsg"></div>
+      <div class="actions">
+        <button id="saveProject">Save and check</button>
+      </div>
+      <div class="msg" id="projectMsg"></div>
+    </div>
+  </section>
 
-  <hr>
-  <p><small>
-    Opens are inferred from images being fetched, and a lot of things fetch images that
-    aren't people. Read <code>docs/ACCURACY.md</code> before trusting any single number.
-  </small></p>
+  <!-- 2 -->
+  <section class="step" id="step-schema" data-state="busy">
+    <div class="dot">2</div>
+    <h2>Create the database tables</h2>
+    <p class="status" data-status>Checking…</p>
+    <div class="body" id="schemaHelp">
+      <ol class="mini">
+        <li>Open your project's <strong>SQL Editor</strong> → New query.</li>
+        <li>Paste the whole of <code>supabase/migrations/0001_init.sql</code> from the repo.</li>
+        <li>Run it, then press Re-check below.</li>
+      </ol>
+      <small>This creates the tables, row-level security policies and the functions the endpoints call.</small>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="step" id="step-functions" data-state="busy">
+    <div class="dot">3</div>
+    <h2>Deploy the tracking endpoints</h2>
+    <p class="status" data-status>Checking…</p>
+    <div class="body" id="functionsHelp">
+      <p style="margin:0 0 8px;font-size:13px;">From the repo root, with the Supabase CLI:</p>
+      <code class="url" style="display:block;white-space:pre">supabase functions deploy px --no-verify-jwt
+supabase functions deploy r  --no-verify-jwt</code>
+      <small>
+        <strong><code>--no-verify-jwt</code> is not optional.</strong> Mail clients fetching your
+        pixel never carry a login token; if the gateway insists on one, no open is ever recorded
+        and nothing visibly breaks.
+      </small>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="step" id="step-redirect" data-state="busy">
+    <div class="dot">4</div>
+    <h2>Let this extension sign you in</h2>
+    <p class="status" data-status>One-time setup in Supabase</p>
+    <div class="body">
+      <p style="margin:0;font-size:13px;">Add this exact URL to your project's allowed redirects:</p>
+      <div class="copyrow">
+        <code class="url" id="redirectUrl">…</code>
+        <button class="ghost" id="copyRedirect">Copy</button>
+      </div>
+      <ol class="mini">
+        <li><strong>Authentication → URL Configuration → Redirect URLs</strong>, paste, save.</li>
+        <li><strong>Authentication → Providers → Google</strong>, enable it, and paste the
+            client ID and secret from a Google Cloud OAuth client.</li>
+        <li>In Google Cloud, that client's authorised redirect URI is
+            <code id="callbackUrl">https://&lt;project&gt;.supabase.co/auth/v1/callback</code>.</li>
+      </ol>
+      <small>Skip this only if you plan to sign in with an email and password instead.</small>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="step" id="step-auth" data-state="busy">
+    <div class="dot">5</div>
+    <h2>Sign in</h2>
+    <p class="status" data-status>Checking…</p>
+    <div class="body">
+      <div id="signedOut">
+        <button id="google">Sign in with Google</button>
+        <small>Uses the Google account you already have — no new password to invent or lose.</small>
+        <details style="margin-top:14px;">
+          <summary style="cursor:pointer;font-size:13px;color:var(--muted);">
+            Use an email and password instead
+          </summary>
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="username">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password">
+          <small>A user you created under Authentication → Users.</small>
+          <div class="actions"><button class="ghost" id="signIn">Sign in</button></div>
+        </details>
+      </div>
+      <div id="signedIn" hidden>
+        <p style="margin:0;font-size:13px;">Signed in as <strong id="who"></strong></p>
+        <div class="actions"><button class="ghost" id="signOut">Sign out</button></div>
+      </div>
+      <div class="msg" id="authMsg"></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="step" id="step-prefs" data-state="ok">
+    <div class="dot">6</div>
+    <h2>Preferences</h2>
+    <p class="status" data-status>Change these any time</p>
+    <div class="body">
+      <div class="toggle">
+        <input id="trackPixel" type="checkbox">
+        <label for="trackPixel" style="margin:0">
+          <b>Track opens</b>
+          <small>Adds an invisible 1×1 image to messages you compose. Toggle any single
+          message from the K beside Send.</small>
+        </label>
+      </div>
+      <div class="toggle">
+        <input id="trackLinks" type="checkbox">
+        <label for="trackLinks" style="margin:0">
+          <b>Track link clicks</b>
+          <small>A click is far stronger evidence than an open, and survives image blocking.
+          Off by default because it rewrites your links, so recipients see a supabase.co
+          address on hover.</small>
+        </label>
+      </div>
+      <div class="msg" id="prefsMsg"></div>
+    </div>
+  </section>
+
+  <p style="color:var(--muted);font-size:12.5px;margin-left:42px;">
+    Opens are inferred from images being fetched, and plenty of things fetch images that
+    aren't people. <code>docs/ACCURACY.md</code> explains what each number can and can't
+    support.
+  </p>
 </main>
+
+<div class="bar">
+  <span class="summary" id="summary">Checking setup…</span>
+  <button class="ghost" id="recheck">Re-check</button>
+</div>
+
 <script type="module" src="src/options.js"></script>
 </body>
 </html>

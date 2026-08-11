@@ -3,7 +3,7 @@
   "name": "Kilroy",
   "version": "0.1.0",
   "description": "See when your Gmail messages get opened. Runs entirely on your own Supabase project.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "identity"],
   "host_permissions": [
     "https://mail.google.com/*",
     "https://*.supabase.co/*"

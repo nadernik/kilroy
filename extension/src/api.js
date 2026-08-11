@@ -147,6 +147,76 @@ export async function signIn(email, password) {
   return session;
 }
 
+/**
+ * The URL Google will hand the session back to. Supabase must have this in its
+ * allowed redirect list or the flow dies at the last step, so the options page
+ * shows it for copying rather than making anyone derive it from the
+ * extension ID.
+ */
+export function redirectUrl() {
+  return chrome.identity.getRedirectURL();
+}
+
+/**
+ * Google sign-in through chrome.identity.
+ *
+ * Supabase's implicit flow hands tokens back in the URL fragment, which never
+ * leaves the browser. The alternative — asking people to invent yet another
+ * password for a tool that only ever watches one Gmail account — is worse in
+ * every way, including security.
+ */
+export async function signInWithGoogle() {
+  const cfg = await requireConfig();
+  const redirectTo = chrome.identity.getRedirectURL();
+  const authUrl =
+    `${cfg.url}/auth/v1/authorize?provider=google` +
+    `&redirect_to=${encodeURIComponent(redirectTo)}`;
+
+  const responseUrl = await new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (url) => {
+      if (chrome.runtime.lastError || !url) {
+        reject(new Error(chrome.runtime.lastError?.message ?? "Sign-in was cancelled."));
+        return;
+      }
+      resolve(url);
+    });
+  });
+
+  const params = new URLSearchParams(new URL(responseUrl).hash.replace(/^#/, ""));
+
+  const failure = params.get("error_description") ?? params.get("error");
+  if (failure) throw new Error(decodeURIComponent(failure.replace(/\+/g, " ")));
+
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) {
+    throw new Error(
+      "Google came back without a session. The usual cause is this extension's " +
+      "redirect URL not being whitelisted in Supabase — see the setup step above.",
+    );
+  }
+
+  // The fragment carries no identity, so ask who we just became.
+  let user = {};
+  try {
+    const res = await fetch(`${cfg.url}/auth/v1/user`, {
+      headers: { apikey: cfg.anonKey, authorization: `Bearer ${accessToken}` },
+    });
+    if (res.ok) user = await res.json();
+  } catch { /* identity is cosmetic; the session is what matters */ }
+
+  const session = {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_at: Number(params.get("expires_at")) ||
+                now() + Number(params.get("expires_in") ?? 3600),
+    email: user?.email ?? null,
+    user_id: user?.id ?? null,
+  };
+  await store.set({ session });
+  return session;
+}
+
 export async function signOut() {
   await store.remove("session");
 }
@@ -213,6 +283,106 @@ export async function rest(path, { method = "GET", body, prefer, headers = {} } 
 }
 
 export const rpc = (name, args) => rest(`rpc/${name}`, { method: "POST", body: args });
+
+// ------------------------------------------------------------------ health --
+
+/**
+ * Setup checks, each resolving to { ok, detail }.
+ *
+ * Every one of these exists because the corresponding failure, left unchecked,
+ * surfaces much later as something that looks unrelated: a key from the wrong
+ * project reads as "Invalid API key" during sign-in, an unrun migration reads
+ * as a permanently empty dashboard, and a function deployed with JWT
+ * verification still on reads as opens that simply never arrive. Catching them
+ * here, by name, is worth more than any amount of documentation.
+ */
+
+export async function checkProject() {
+  const cfg = await getConfig();
+  if (!cfg) return { ok: false, detail: "No project URL and key saved yet." };
+
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/`, {
+      headers: { apikey: cfg.anonKey, authorization: `Bearer ${cfg.anonKey}` },
+    });
+    if (res.status === 401) {
+      return { ok: false, detail: "The project rejected this key. Is it from this project?" };
+    }
+    if (!res.ok && res.status !== 404) {
+      return { ok: false, detail: `Project responded HTTP ${res.status}.` };
+    }
+    return { ok: true, detail: `Reachable at ${cfg.url.replace("https://", "")}` };
+  } catch {
+    return { ok: false, detail: "Could not reach the project at all. Check the URL." };
+  }
+}
+
+export async function checkSchema() {
+  const cfg = await getConfig();
+  if (!cfg) return { ok: false, detail: "Configure the project first." };
+
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/message_stats?select=token&limit=1`, {
+      headers: { apikey: cfg.anonKey, authorization: `Bearer ${cfg.anonKey}` },
+    });
+    if (res.ok) return { ok: true, detail: "Tables, view and functions are in place." };
+
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 404 || body?.code === "PGRST205") {
+      return { ok: false, detail: "Schema missing — run supabase/migrations/0001_init.sql." };
+    }
+    return { ok: false, detail: body?.message ?? `HTTP ${res.status}` };
+  } catch {
+    return { ok: false, detail: "Could not query the project." };
+  }
+}
+
+export async function checkFunctions() {
+  const cfg = await getConfig();
+  if (!cfg) return { ok: false, detail: "Configure the project first." };
+
+  try {
+    // A token that will never exist. Logs nothing, still returns an image.
+    const res = await fetch(`${cfg.url}/functions/v1/px/setupprobe00000000.gif`, {
+      cache: "no-store",
+    });
+    if (res.status === 401) {
+      return {
+        ok: false,
+        detail: "Deployed, but demanding a JWT. Redeploy px with --no-verify-jwt.",
+      };
+    }
+    if (res.status === 404) {
+      return { ok: false, detail: "Not deployed — run: supabase functions deploy px" };
+    }
+    if (!(res.headers.get("content-type") ?? "").includes("image/gif")) {
+      return { ok: false, detail: `Responded HTTP ${res.status}, but not with an image.` };
+    }
+    return { ok: true, detail: "Pixel endpoint is live and open to mail clients." };
+  } catch {
+    return { ok: false, detail: "Could not reach the pixel endpoint." };
+  }
+}
+
+export async function checkAuth() {
+  const cfg = await getConfig();
+  if (!cfg) return { ok: false, detail: "Configure the project first." };
+
+  const session = await readSession();
+  if (!session) return { ok: false, detail: "Not signed in." };
+
+  try {
+    const token = await accessToken();
+    const res = await fetch(`${cfg.url}/auth/v1/user`, {
+      headers: { apikey: cfg.anonKey, authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return { ok: false, detail: "Session expired — sign in again." };
+    const user = await res.json();
+    return { ok: true, detail: `Signed in as ${user.email ?? "unknown"}` };
+  } catch {
+    return { ok: false, detail: "Could not verify the session." };
+  }
+}
 
 // ------------------------------------------------------------------ tokens --
 
