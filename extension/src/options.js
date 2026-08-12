@@ -2,12 +2,16 @@ import * as api from "./api.js";
 
 const $ = (id) => document.getElementById(id);
 
+const STEP_NUMBER = { project: "1", schema: "2", functions: "3", redirect: "4", auth: "5" };
+
 function setStep(id, state, detail) {
   const step = $(`step-${id}`);
   step.dataset.state = state;
   step.querySelector("[data-status]").textContent = detail;
+  // A step blocked by an earlier failure isn't itself broken — keep its number
+  // rather than flagging it, so the one thing worth fixing stands out.
   step.querySelector(".dot").textContent =
-    state === "ok" ? "✓" : state === "bad" ? "!" : step.querySelector(".dot").textContent;
+    state === "ok" ? "✓" : state === "bad" ? "!" : STEP_NUMBER[id] ?? "";
 }
 
 function say(el, text, kind = "") {
@@ -23,8 +27,9 @@ function say(el, text, kind = "") {
  * rather than a wall of red.
  */
 async function runChecks() {
+  const ids = ["project", "schema", "functions", "redirect", "auth"];
   $("summary").textContent = "Checking setup…";
-  for (const id of ["project", "schema", "functions", "auth"]) {
+  for (const id of ids) {
     const step = $(`step-${id}`);
     step.dataset.state = "busy";
     step.querySelector("[data-status]").textContent = "Checking…";
@@ -34,21 +39,21 @@ async function runChecks() {
   setStep("project", project.ok ? "ok" : "bad", project.detail);
 
   if (!project.ok) {
-    for (const id of ["schema", "functions", "auth"]) {
-      setStep(id, "bad", "Waiting on step 1.");
-    }
+    for (const id of ids.slice(1)) setStep(id, "wait", "Waiting on step 1.");
     $("summary").textContent = "Start at step 1.";
     return;
   }
 
-  const [schema, functions, auth] = await Promise.all([
+  const [schema, functions, google, auth] = await Promise.all([
     api.checkSchema(),
     api.checkFunctions(),
+    api.checkGoogle(project),
     api.checkAuth(),
   ]);
 
   setStep("schema", schema.ok ? "ok" : "bad", schema.detail);
   setStep("functions", functions.ok ? "ok" : "bad", functions.detail);
+  setStep("redirect", google.ok ? "ok" : "bad", google.detail);
   setStep("auth", auth.ok ? "ok" : "bad", auth.detail);
 
   $("schemaHelp").hidden = schema.ok;

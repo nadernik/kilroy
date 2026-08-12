@@ -302,19 +302,46 @@ export async function checkProject() {
   if (!cfg) return { ok: false, detail: "No project URL and key saved yet." };
 
   try {
-    const res = await fetch(`${cfg.url}/rest/v1/`, {
-      headers: { apikey: cfg.anonKey, authorization: `Bearer ${cfg.anonKey}` },
+    // /auth/v1/settings is the right probe: it accepts a publishable key and
+    // reports which providers the project has enabled.
+    //
+    // /rest/v1/ looks like the obvious choice and is a trap — it demands a
+    // SECRET key and answers 401 to a perfectly good publishable one, so it
+    // reports a healthy project as a rejected key.
+    const res = await fetch(`${cfg.url}/auth/v1/settings`, {
+      headers: { apikey: cfg.anonKey },
     });
     if (res.status === 401) {
       return { ok: false, detail: "The project rejected this key. Is it from this project?" };
     }
-    if (!res.ok && res.status !== 404) {
+    if (!res.ok) {
       return { ok: false, detail: `Project responded HTTP ${res.status}.` };
     }
-    return { ok: true, detail: `Reachable at ${cfg.url.replace("https://", "")}` };
+    const settings = await res.json();
+    return {
+      ok: true,
+      detail: `Reachable at ${cfg.url.replace("https://", "")}`,
+      providers: settings?.external ?? {},
+    };
   } catch {
     return { ok: false, detail: "Could not reach the project at all. Check the URL." };
   }
+}
+
+/**
+ * Whether the Google provider is switched on.
+ *
+ * Note the limit: this confirms the provider is configured, not that this
+ * extension's redirect URL is whitelisted. Nothing readable from here can
+ * confirm that — a missing redirect URL only shows up as Google returning no
+ * session, which signInWithGoogle names explicitly when it happens.
+ */
+export async function checkGoogle(project) {
+  const p = project ?? (await checkProject());
+  if (!p.ok) return { ok: false, detail: "Waiting on step 1." };
+  return p.providers?.google
+    ? { ok: true, detail: "Google provider enabled. Redirect URL still needs whitelisting once." }
+    : { ok: false, detail: "Google provider is off — Authentication → Providers → Google." };
 }
 
 export async function checkSchema() {

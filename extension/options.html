@@ -47,11 +47,14 @@
   .step[data-state="ok"]   .dot { border-color: var(--ok);  color: var(--ok);  }
   .step[data-state="bad"]  .dot { border-color: var(--bad); color: var(--bad); }
   .step[data-state="busy"] .dot { border-color: var(--accent); color: var(--accent); }
+  .step[data-state="wait"] .dot { opacity: .45; }
 
   .step h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
   .status { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
   .step[data-state="ok"]  .status { color: var(--ok); }
   .step[data-state="bad"] .status { color: var(--bad); }
+  .step[data-state="wait"] .status { color: var(--muted); }
+  .step[data-state="wait"] .body { opacity: .5; }
 
   .body { background: var(--card); border: 1px solid var(--line);
           border-radius: 10px; padding: 16px; margin-top: 10px; }
