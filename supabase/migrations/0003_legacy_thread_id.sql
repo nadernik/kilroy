@@ -28,7 +28,11 @@ create index if not exists messages_legacy_thread_idx
 -- what the caller happened to send.
 drop function if exists public.note_self_view(text, text);
 
-create function public.note_self_view(
+-- OR REPLACE so this file can be run twice without erroring. A plain CREATE here
+-- failed on a second run with "function already exists with same argument types",
+-- because the DROP above had already removed the only signature it could match —
+-- which reads like the migration failed when in fact it had already succeeded.
+create or replace function public.note_self_view(
   p_token            text,
   p_thread_id        text default null,
   p_legacy_thread_id text default null
