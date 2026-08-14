@@ -6,7 +6,8 @@
   "permissions": ["storage", "identity"],
   "host_permissions": [
     "https://mail.google.com/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://ipapi.co/*"
   ],
   "background": {
     "service_worker": "src/background.js",

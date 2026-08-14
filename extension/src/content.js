@@ -150,6 +150,30 @@
     bodyEl.querySelectorAll("img[data-kilroy]").forEach((el) => el.remove());
   }
 
+  /**
+   * Put the chip beside the Send button without putting it *inside* it.
+   *
+   * Send and its dropdown caret share a wrapper that carries Gmail's blue button
+   * background, and Gmail styles its descendants. Anything placed within that
+   * wrapper — even after the caret — sits on the blue and gets restyled, which is
+   * why earlier attempts looked like a broken piece of the split-button. So the
+   * chip goes in as a sibling of the whole group.
+   */
+  function placeChip(send, chip) {
+    const group = send.parentElement;
+    const host = group?.parentElement ?? null;
+
+    // Gmail's compose toolbar is table markup in places, and the HTML parser
+    // hoists a stray div out of a row — so land in a cell instead.
+    if (!host || /^(TR|TBODY|THEAD|TFOOT|TABLE)$/.test(host.tagName)) {
+      const cell = send.closest("td");
+      (cell ?? group ?? send.parentElement)?.appendChild(chip);
+      return;
+    }
+
+    host.insertBefore(chip, group.nextSibling);
+  }
+
   function addChip(root) {
     const existing = root.querySelector(".kilroy-chip");
     if (existing) return existing;
@@ -170,10 +194,7 @@
     label.className = "kilroy-chip__label";
     chip.append(dot, label);
 
-    // Append rather than insert after Send. Send and its dropdown caret live in
-    // the same wrapper, and inserting straight after the button dropped the chip
-    // between the two — which read as part of a broken split-button.
-    send.parentElement.appendChild(chip);
+    placeChip(send, chip);
 
     chip.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chip.click(); }

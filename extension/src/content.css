@@ -6,45 +6,57 @@
 /* Compose-window toggle.
    A bare mark can't say whether it's on, so the state is spelled out. The dot is
    a placeholder for a real logo — swap it without touching the layout. */
-.kilroy-chip {
+/* Every visual property is stated outright, including the ones that look like
+   defaults. Gmail styles deep into its own toolbars, and anything left unset
+   here gets inherited from whatever container the chip lands in. */
+div.kilroy-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 26px;
+  min-width: 0;
   padding: 0 11px;
-  margin: 0 8px;
+  margin: 0 0 0 10px;
   border: 1px solid #dadce0;
   border-radius: 13px;
   background: #fff;
+  background-image: none;
+  box-shadow: none;
   color: #5f6368;
   font: 500 12px/1 "Google Sans", Roboto, Arial, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+  text-decoration: none;
+  text-shadow: none;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
   vertical-align: middle;
   flex: none;
+  opacity: 1;
   transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
 }
 
-.kilroy-chip:hover { background: #f1f3f4; border-color: #9aa0a6; }
-.kilroy-chip:focus-visible { outline: 2px solid #1a73e8; outline-offset: 1px; }
+div.kilroy-chip:hover { background: #f1f3f4; border-color: #9aa0a6; color: #202124; }
+div.kilroy-chip:focus-visible { outline: 2px solid #1a73e8; outline-offset: 1px; }
 
 .kilroy-chip__dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #bdc1c6;
+  box-shadow: none;
   flex: none;
 }
 
-.kilroy-chip[data-armed="true"] {
-  background: #e8f0fe;
+div.kilroy-chip[data-armed="true"] {
+  background: #fff;
   border-color: #a8c7fa;
   color: #1967d2;
 }
 
+div.kilroy-chip[data-armed="true"]:hover { background: #f0f5fe; }
 .kilroy-chip[data-armed="true"] .kilroy-chip__dot { background: #1a73e8; }
-.kilroy-chip[data-armed="true"]:hover { background: #d7e5fd; }
 
 /* Open-count marker on a sent message. */
 .kilroy-badge {
@@ -99,15 +111,17 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .kilroy-chip { background: #202124; border-color: #5f6368; color: #bdc1c6; }
-  .kilroy-chip:hover { background: #292a2d; border-color: #9aa0a6; }
+  /* These must carry the same div. prefix as the light rules above. Without it
+     they lose on specificity and light styling survives into dark mode. */
+  div.kilroy-chip { background: #202124; border-color: #5f6368; color: #bdc1c6; }
+  div.kilroy-chip:hover { background: #292a2d; border-color: #9aa0a6; color: #e8eaed; }
   .kilroy-chip__dot { background: #5f6368; }
-  .kilroy-chip[data-armed="true"] {
-    background: #1f3047;
+  div.kilroy-chip[data-armed="true"] {
+    background: #202124;
     border-color: #3b5b8c;
     color: #8ab4f8;
   }
-  .kilroy-chip[data-armed="true"]:hover { background: #24395a; }
+  div.kilroy-chip[data-armed="true"]:hover { background: #26303c; }
   .kilroy-chip[data-armed="true"] .kilroy-chip__dot { background: #8ab4f8; }
   .kilroy-badge { background: #2a2b2e; color: #9aa0a6; }
   .kilroy-badge[data-state="opened"]   { background: #1e3a29; color: #81c995; }

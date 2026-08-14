@@ -117,9 +117,31 @@
   .detail .inner { padding: 14px 18px; }
   .detail h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
                color: var(--muted); margin: 0 0 9px; font-weight: 600; }
-  .ev { padding: 11px 0; border-bottom: 1px solid var(--border); }
-  .ev:last-child { border-bottom: 0; padding-bottom: 2px; }
-  .ev-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .detail-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .detail-head h3 { margin: 0; }
+  .linkish {
+    background: none; border: 0; padding: 0; margin: 0; color: var(--series);
+    font: inherit; font-size: 12px; cursor: pointer; text-align: left;
+  }
+  .linkish:hover { text-decoration: underline; }
+  .linkish:disabled { color: var(--muted); cursor: default; text-decoration: none; }
+
+  details.ev { padding: 0; border-bottom: 1px solid var(--border); }
+  details.ev:last-child { border-bottom: 0; }
+  .ev-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 0; cursor: pointer; list-style: none;
+  }
+  .ev-head::-webkit-details-marker { display: none; }
+  /* Own chevron, so the row reads as one clickable line rather than a widget. */
+  .ev-head::after {
+    content: "›"; margin-left: auto; color: var(--muted); font-size: 15px;
+    transform: rotate(90deg); transition: transform 110ms ease;
+  }
+  details.ev[open] > .ev-head::after { transform: rotate(270deg); }
+  .ev-head:hover { color: var(--text); }
+  .ev-head .src { color: var(--muted); font-size: 12px; }
+  details.ev[open] > .ev-meta { padding-bottom: 12px; }
   .ev-head .t { font-variant-numeric: tabular-nums; font-size: 12.5px;
                 font-weight: 500; min-width: 132px; }
   .ev-head .verdict { color: var(--text-2); font-size: 12.5px; }

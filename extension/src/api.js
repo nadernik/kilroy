@@ -411,6 +411,48 @@ export async function checkAuth() {
   }
 }
 
+// -------------------------------------------------------------- geolocation --
+
+const GEO_ENDPOINT = "https://ipapi.co/{ip}/json/";
+
+/**
+ * Country/city for an address, on demand.
+ *
+ * Never called automatically. On a Gmail or Apple fetch the address belongs to
+ * their proxy and the answer describes a datacentre; on a direct fetch it may be
+ * the reader's own address, and handing that to a third party is a decision the
+ * user makes per click, not a background behaviour.
+ *
+ * Results are cached per address so the same one is never sent twice.
+ */
+export async function lookupIp(ip) {
+  const address = String(ip ?? "").trim();
+  if (!/^[0-9a-f:.]{3,45}$/i.test(address)) throw new Error("Not a usable address.");
+
+  const key = `geo:${address}`;
+  const cached = (await store.get(key))[key];
+  if (cached !== undefined) return cached;
+
+  let res;
+  try {
+    res = await fetch(GEO_ENDPOINT.replace("{ip}", encodeURIComponent(address)));
+  } catch {
+    throw new Error("Couldn't reach the lookup service.");
+  }
+
+  if (res.status === 429) throw new Error("Lookup service is rate-limiting — try later.");
+  if (!res.ok) throw new Error(`Lookup failed (HTTP ${res.status}).`);
+
+  const data = await res.json().catch(() => ({}));
+  if (data?.error) throw new Error(data.reason ?? "Lookup failed.");
+
+  const place = [data.city, data.region, data.country_name].filter(Boolean).join(", ");
+  const label = place ? (data.org ? `${place} · ${data.org}` : place) : null;
+
+  await store.set({ [key]: label });
+  return label;
+}
+
 // ------------------------------------------------------------------ tokens --
 
 /**

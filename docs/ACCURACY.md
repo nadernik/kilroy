@@ -78,6 +78,40 @@ First-open **time** is the most reliable field in the whole system. Open
 **counts** are a lower bound. "Not opened" is the weakest signal here — treat it
 as absence of evidence, not evidence of absence.
 
+## Which recipient opened it
+
+For a message with one recipient: that person, trivially. For more than one:
+**unknowable**, and the dashboard says so rather than guessing.
+
+One pixel is embedded in one message body, and every recipient receives the same
+body. A fetch therefore identifies the *message*, never which of its recipients
+triggered it. Trackers that show a per-recipient breakdown of a group email are
+either sending a separate copy per person, or inferring.
+
+If you need per-recipient attribution, the honest way is to send individually so
+each copy carries its own token — at the cost of turning one thread into several.
+
+## The address, and looking it up
+
+Kilroy stores the address every fetch came from, and the dashboard can look up
+its location on demand. Both are more limited than they sound.
+
+For a Gmail recipient the address belongs to **Google**. For Apple Mail with
+privacy protection, **Apple**. For a corporate recipient, often their **security
+gateway**. Geolocating any of those tells you where that company's servers are.
+The dashboard labels the result accordingly — "where Google's image proxy sits,
+not where the reader is" — because the number on its own invites exactly the wrong
+reading.
+
+The one case where an address means something is a fetch with **no proxy
+detected**: the mail client came to us directly, so the address plausibly belongs
+to whoever read it. Those rows are marked as such.
+
+Lookups are never automatic. Each one is a button press, because the request
+hands that address to a third-party service (`ipapi.co`), and on a direct fetch
+that address may be a real person's. Results are cached per address, so the same
+one is never sent twice.
+
 ## Classification reference
 
 Every row in `opens` carries one of these, with a `reason`:

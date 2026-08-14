@@ -369,53 +369,118 @@ function metaRow(label, value, hint) {
   return [dt, dd];
 }
 
-/** The raw classification history for one message, annotated. */
-export function renderDetail(inner, events, message, error) {
-  inner.replaceChildren(el("h3", null, "Every fetch recorded"));
+/**
+ * Address row, with an opt-in location lookup.
+ *
+ * The button is deliberate rather than automatic: looking an address up means
+ * handing it to a third party, and on a direct fetch that address may genuinely
+ * be the reader's. Nothing leaves the machine unless it's pressed.
+ */
+function addressRow(meta, event, source, onLookup) {
+  const dt = el("dt", null, "Address");
+  const dd = el("dd");
+  dd.append(el("span", null, event.ip));
 
-  if (error) { inner.append(el("p", "dim", error)); return; }
+  if (event.proxy) {
+    dd.append(el("span", "hint", `${source.who} — not the recipient's own address.`));
+  }
+
+  if (onLookup) {
+    const result = el("span", "hint");
+    const button = el("button", "linkish", "Look up location");
+
+    button.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      button.disabled = true;
+      button.textContent = "Looking up…";
+      try {
+        const place = await onLookup(event.ip);
+        if (!place) {
+          result.textContent = "No location on record for this address.";
+        } else if (event.proxy) {
+          result.textContent = `${place} — where ${source.who} sits. Not where the reader is.`;
+        } else {
+          result.textContent = `${place} — no proxy detected, so plausibly the reader.`;
+        }
+        button.remove();
+      } catch (err) {
+        result.textContent = err.message;
+        button.disabled = false;
+        button.textContent = "Try again";
+      }
+    });
+
+    dd.append(button, result);
+  }
+
+  meta.append(dt, dd);
+}
+
+/**
+ * The classification history for one message.
+ *
+ * One collapsed line per fetch, because a dozen fetches each spelling out five
+ * fields is a wall nobody reads. The line carries the answer — when, how it was
+ * classified, and who fetched it — and the reasoning is one click away.
+ */
+export function renderDetail(inner, events, message, opts = {}) {
+  inner.replaceChildren();
+
+  const head = el("div", "detail-head");
+  head.append(el("h3", null, "Every fetch recorded"));
+  inner.append(head);
+
+  if (opts.error) { inner.append(el("p", "dim", opts.error)); return; }
   if (!events.length) {
     inner.append(el("p", "dim", "Nothing has fetched this pixel yet."));
     return;
   }
 
+  const toggleAll = el("button", "linkish", "Expand all");
+  head.append(toggleAll);
+
   const who = attribute(message);
+  const blocks = [];
 
-  for (const e of events) {
-    const source = PROXIES[e.proxy] ?? DIRECT;
-    const automated = source.automated || e.classification === "prefetch";
+  for (const event of events) {
+    const source = PROXIES[event.proxy] ?? DIRECT;
+    const automated = source.automated || event.classification === "prefetch";
 
-    const block = el("div", "ev");
+    const block = document.createElement("details");
+    block.className = "ev";
 
-    const head = el("div", "ev-head");
-    head.append(el("span", "t", fmtDate(e.opened_at)));
-    head.append(el("span", `pill ${e.classification}`, e.classification));
-    head.append(el("span", "verdict", VERDICTS[e.classification] ?? e.classification));
-    block.append(head);
+    const summary = document.createElement("summary");
+    summary.className = "ev-head";
+    summary.append(el("span", "t", fmtDate(event.opened_at)));
+    summary.append(el("span", `pill ${event.classification}`, event.classification));
+    summary.append(el("span", "verdict", VERDICTS[event.classification] ?? event.classification));
+    summary.append(el("span", "src", source.who));
+    block.append(summary);
 
     const meta = el("dl", "ev-meta");
     meta.append(...metaRow("Fetched by", source.who, source.note));
     meta.append(...metaRow(
       "Automated?",
       automated ? "Almost certainly — no reader implied" : "Consistent with a person opening it",
-      e.reason ?? null,
+      event.reason ?? null,
     ));
     meta.append(...metaRow("Recipient", who.text, who.hint));
-    if (e.ip) {
-      meta.append(...metaRow(
-        "Address",
-        e.ip,
-        e.proxy ? `${source.who} — not the recipient's own address.` : null,
-      ));
-    }
-    if (e.user_agent) {
+    if (event.ip) addressRow(meta, event, source, opts.onLookup);
+    if (event.user_agent) {
       const dt = el("dt", null, "Client");
       const dd = el("dd");
-      dd.append(el("span", "ua", e.user_agent));
+      dd.append(el("span", "ua", event.user_agent));
       meta.append(dt, dd);
     }
     block.append(meta);
 
+    blocks.push(block);
     inner.append(block);
   }
+
+  toggleAll.addEventListener("click", () => {
+    const expand = blocks.some((b) => !b.open);
+    blocks.forEach((b) => { b.open = expand; });
+    toggleAll.textContent = expand ? "Collapse all" : "Expand all";
+  });
 }

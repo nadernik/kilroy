@@ -54,7 +54,7 @@ async function selectRow(tr, message) {
   row.append(cell);
   tr.after(row);
 
-  views.renderDetail(inner, [], message, "Loading…");
+  views.renderDetail(inner, [], message, { error: "Loading…" });
 
   try {
     const data = await api.rest(
@@ -63,9 +63,9 @@ async function selectRow(tr, message) {
     );
     const events = (data?.[0]?.opens ?? [])
       .sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at));
-    views.renderDetail(inner, events, message);
+    views.renderDetail(inner, events, message, { onLookup: api.lookupIp });
   } catch (err) {
-    views.renderDetail(inner, [], message, err.message);
+    views.renderDetail(inner, [], message, { error: err.message });
   }
 }
 
