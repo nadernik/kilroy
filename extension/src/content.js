@@ -359,9 +359,24 @@
     instrumented.add(bodyEl);
 
     const status = await getStatus();
-    if (!status?.ok || !status.signedIn) return;
 
+    // The chip goes up before anything can fail, because the states below are
+    // exactly the ones worth seeing. Returning early — as this did when signed
+    // out — left no chip at all, which is indistinguishable from Kilroy not
+    // being installed: you compose, you send, and nothing is tracked, silently.
+    // An absent session is not a rare edge case either. Extension storage is
+    // keyed by extension ID, so anything that changes the ID empties it.
     const chip = addChip(root);
+
+    if (!status?.ok) {
+      paintChip(chip, false, `Kilroy isn't responding (${status?.error ?? "no reply"}). This message won't be tracked.`);
+      return;
+    }
+
+    if (!status.signedIn) {
+      paintChip(chip, false, "Kilroy is signed out — sign in from its options, then reload Gmail. This message won't be tracked.");
+      return;
+    }
 
     if (!status.settings.trackPixel) {
       paintChip(chip, false, "Tracking is off in Kilroy's options.");
