@@ -46,11 +46,18 @@ the scanner clicking, not the human.
 recipient's would. Untreated this is the single largest source of garbage in a
 tracker like this.
 
-Kilroy's answer: while you have a tracked message on screen, the extension calls
-`note_self_view`, which both records that you're looking *and* reaches back
-twenty seconds to reclassify anything already logged. Google's proxy fetch often
+Kilroy's answer: when a tracked message renders, the extension calls
+`note_self_view` once, which both records that you're looking *and* reaches back
+eight seconds to reclassify anything already logged. Google's proxy fetch often
 lands a beat before the extension notices the thread rendered, hence the reach
 back.
+
+Both halves of that are deliberately small. An earlier version claimed
+continuously for as long as the thread stayed on screen and reached back twenty
+seconds each time, which slid the rewrite window forward and swallowed genuine
+opens — a real open from a phone, logged correctly, flipped to `self` moments
+later. Gmail fetches a pixel once per render, so one claim per render is all
+that was ever needed.
 
 **The moment after you hit send.** Anything arriving within 45 seconds of send is
 marked `prefetch`. Nobody reads that fast; that window is your own client and
@@ -148,11 +155,13 @@ order by o.opened_at;
 
 ## Tuning
 
-The windows are constants in `record_open` in `0001_init.sql`:
+The windows are constants in `record_open` and `note_self_view`. Both functions
+were redefined by `0002_narrow_self_view.sql`, so read them there rather than in
+`0001_init.sql` — the originals are still in 0001 and are no longer what runs:
 
 - **15s** dup collapse
-- **25s** self-view lookback
-- **20s** self-view reach-back in `note_self_view`
+- **10s** self-view lookback, forward from a claim (was 25s in 0001)
+- **8s** self-view reach-back in `note_self_view` (was 20s in 0001)
 - **45s** post-send grace
 
 Widen the grace window if your own sends keep registering as opens. Narrow it if
