@@ -397,6 +397,24 @@
     return null;
   }
 
+  /**
+   * Gmail's hex thread id — the only one that also appears on thread-list rows,
+   * and therefore the only way a list badge can find its message. The id in the
+   * URL is an unrelated opaque permalink; see migration 0003.
+   *
+   * Scoped to the pixel's own ancestors on purpose. A document-wide search would
+   * happily return a neighbouring row's id when the list and a thread are on
+   * screen together, which is exactly how you get a badge on the wrong message.
+   */
+  function legacyThreadIdFor(img) {
+    const onAncestor = img.closest("[data-legacy-thread-id]");
+    if (onAncestor) return onAncestor.getAttribute("data-legacy-thread-id");
+
+    const item = img.closest('[role="listitem"]');
+    return item?.querySelector("[data-legacy-thread-id]")
+      ?.getAttribute("data-legacy-thread-id") ?? null;
+  }
+
   /** Who sent the message this pixel belongs to. */
   function senderOf(img) {
     const item = img.closest('[role="listitem"]');
@@ -526,12 +544,16 @@
     const claiming = document.hasFocus() && fresh.length;
     if (claiming) fresh.forEach((token) => claimed.add(token));
 
+    // Every rendered pixel here belongs to the thread on screen, so one lookup
+    // serves them all.
+    const legacyThreadId = legacyThreadIdFor(rendered.get(tokens[0])) ?? null;
+
     // Both at once. These used to run in series, which doubled the wait for no
     // benefit: note_self_view reaches back a few seconds to reclassify, so it
     // doesn't need to land before the read to stay correct.
     const [, stats] = await Promise.all([
       claiming
-        ? ask("selfView", { tokens: fresh, threadId: currentThreadId() })
+        ? ask("selfView", { tokens: fresh, threadId: currentThreadId(), legacyThreadId })
         : Promise.resolve(null),
       ask("stats", { tokens }),
     ]);
@@ -541,9 +563,65 @@
     paintFromCache(renderedTokens());
   }
 
+  // ------------------------------------------------------- thread-list badges --
+
+  // legacy thread id -> stats row, or null for "asked, not tracked". Caching the
+  // misses matters as much as the hits: without it, every scroll re-asks about
+  // the same fifty untracked threads.
+  const listStats = new Map();
+  let lastListFetch = 0;
+
+  function paintRowBadge(host, row) {
+    let badge = host.querySelector(":scope > .kilroy-row-badge");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "kilroy-row-badge";
+      host.insertBefore(badge, host.firstChild);
+    }
+
+    const opens = Number(row.open_count ?? 0);
+    const prefetches = Number(row.prefetch_count ?? 0);
+
+    badge.dataset.state = opens > 0 ? "opened" : prefetches > 0 ? "prefetch" : "unopened";
+    badge.textContent = opens > 0 ? `K ${opens}` : "K";
+    badge.title = opens > 0
+      ? `Kilroy — opened ${opens} time${opens === 1 ? "" : "s"}, last ${ago(row.last_open_at)}`
+      : prefetches > 0
+        ? "Kilroy — delivered, but every fetch so far looks automated"
+        : "Kilroy — sent, no confirmed open yet";
+  }
+
+  async function paintListBadges() {
+    const rows = new Map();
+    for (const tr of document.querySelectorAll('tr[role="row"]')) {
+      const id = tr.querySelector("[data-legacy-thread-id]")
+        ?.getAttribute("data-legacy-thread-id");
+      if (id) rows.set(id, tr);
+    }
+    if (!rows.size) return;
+
+    const unknown = [...rows.keys()].filter((id) => !listStats.has(id));
+    if (unknown.length && Date.now() - lastListFetch > 5_000) {
+      lastListFetch = Date.now();
+      const res = await ask("statsByThreads", { legacyIds: unknown });
+      if (res.ok) {
+        for (const row of res.rows ?? []) listStats.set(row.legacy_thread_id, row);
+        for (const id of unknown) if (!listStats.has(id)) listStats.set(id, null);
+      }
+    }
+
+    for (const [id, tr] of rows) {
+      const row = listStats.get(id);
+      if (!row) continue;
+      const host = tr.querySelector("[data-legacy-thread-id]")?.parentElement;
+      if (host) paintRowBadge(host, row);
+    }
+  }
+
   // --------------------------------------------------------------- driver --
 
   const scan = throttle(() => {
+    paintListBadges().catch(() => {});
     document.querySelectorAll(SEL.composeBody).forEach((el) => {
       instrumentCompose(el).catch(() => {});
     });

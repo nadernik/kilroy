@@ -10,6 +10,9 @@
 import * as api from "./api.js";
 
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
+// Gmail's legacy thread id is hex. Validated rather than trusted, because these
+// go straight into a PostgREST in.(…) list.
+const LEGACY_THREAD_RE = /^[0-9a-f]{6,32}$/i;
 
 const handlers = {
   async status() {
@@ -82,15 +85,34 @@ const handlers = {
   },
 
   /** "I am looking at this message right now, so don't count what follows." */
-  async selfView({ tokens, threadId }) {
+  async selfView({ tokens, threadId, legacyThreadId }) {
     const valid = (tokens ?? []).filter((t) => TOKEN_RE.test(t));
+    const legacy = LEGACY_THREAD_RE.test(legacyThreadId ?? "") ? legacyThreadId : null;
     await Promise.all(
       valid.map((p_token) =>
-        api.rpc("note_self_view", { p_token, p_thread_id: threadId || null })
-           .catch(() => {}),
+        api.rpc("note_self_view", {
+          p_token,
+          p_thread_id: threadId || null,
+          p_legacy_thread_id: legacy,
+        }).catch(() => {}),
       ),
     );
     return { noted: valid.length };
+  },
+
+  /**
+   * Stats for thread-list rows, keyed by Gmail's hex thread id.
+   *
+   * Only threads viewed at least once since sending have a legacy id on record,
+   * so this returns fewer rows than it is asked about by design.
+   */
+  async statsByThreads({ legacyIds }) {
+    const valid = (legacyIds ?? []).filter((id) => LEGACY_THREAD_RE.test(id));
+    if (!valid.length) return { rows: [] };
+    const rows = await api.rest(
+      `message_stats?legacy_thread_id=in.(${valid.join(",")})&select=*`,
+    );
+    return { rows };
   },
 
   async stats({ tokens }) {
