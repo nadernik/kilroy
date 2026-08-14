@@ -7,7 +7,7 @@
   "host_permissions": [
     "https://mail.google.com/*",
     "https://*.supabase.co/*",
-    "https://ipapi.co/*"
+    "https://ipwho.is/*"
   ],
   "background": {
     "service_worker": "src/background.js",

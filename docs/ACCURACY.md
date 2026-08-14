@@ -108,9 +108,20 @@ detected**: the mail client came to us directly, so the address plausibly belong
 to whoever read it. Those rows are marked as such.
 
 Lookups are never automatic. Each one is a button press, because the request
-hands that address to a third-party service (`ipapi.co`), and on a direct fetch
+hands that address to a third-party service (`ipwho.is`), and on a direct fetch
 that address may be a real person's. Results are cached per address, so the same
 one is never sent twice.
+
+A demonstration of the whole problem: Google's proxy, Apple's relay, and Google's
+public DNS all resolve to *San Jose, California*. That is where the datacentres
+are. If a tracker ever shows you a recipient's city with confidence, this is the
+number it is showing you.
+
+The service is a single constant, `GEO_ENDPOINT` in `extension/src/api.js`. These
+free endpoints change their terms without notice — `ipapi.co` and `ip-api.com`
+were both tried first and rejected the request outright — so if lookups start
+failing, swapping it is a one-line edit plus a matching entry in the manifest's
+`host_permissions`.
 
 ## Classification reference
 

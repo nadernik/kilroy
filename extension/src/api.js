@@ -413,7 +413,19 @@ export async function checkAuth() {
 
 // -------------------------------------------------------------- geolocation --
 
-const GEO_ENDPOINT = "https://ipapi.co/{ip}/json/";
+/**
+ * Chosen by testing the alternatives, not by reputation:
+ *
+ *   ipwho.is     200, HTTPS, no key, Access-Control-Allow-Origin: *   <- this one
+ *   ipapi.co     429/403 on unkeyed use, whatever the documented quota says
+ *   ip-api.com   403 — no HTTPS at all without a paid key
+ *   freeipapi    302 redirect
+ *
+ * One constant, so swapping it when this one changes its terms is a one-line
+ * edit. Any replacement must be HTTPS and must be added to host_permissions in
+ * the manifest, or the request never leaves.
+ */
+const GEO_ENDPOINT = "https://ipwho.is/{ip}";
 
 /**
  * Country/city for an address, on demand.
@@ -441,14 +453,18 @@ export async function lookupIp(ip) {
   }
 
   if (res.status === 429) throw new Error("Lookup service is rate-limiting — try later.");
+  if (res.status === 403) throw new Error("Lookup service refused the request.");
   if (!res.ok) throw new Error(`Lookup failed (HTTP ${res.status}).`);
 
   const data = await res.json().catch(() => ({}));
-  if (data?.error) throw new Error(data.reason ?? "Lookup failed.");
+  if (data?.success === false) throw new Error(data.message ?? "No result for that address.");
 
-  const place = [data.city, data.region, data.country_name].filter(Boolean).join(", ");
-  const label = place ? (data.org ? `${place} · ${data.org}` : place) : null;
+  const place = [data.city, data.region, data.country].filter(Boolean).join(", ");
+  const org = data.connection?.org || data.connection?.isp || null;
+  const label = place ? (org ? `${place} · ${org}` : place) : null;
 
+  // Cached even when null: a second lookup of an address with no result would
+  // just send it again for the same nothing.
   await store.set({ [key]: label });
   return label;
 }
