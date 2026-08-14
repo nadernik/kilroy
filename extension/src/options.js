@@ -72,6 +72,15 @@ async function runChecks() {
 
 async function loadForm() {
   const config = await api.getConfig();
+  const bundled = await api.configIsBundled();
+
+  // With a bundled project there is nothing to type, so the form collapses to a
+  // disclosure and the step reads as done rather than as a chore not yet started.
+  $("bundledNote").hidden = !bundled;
+  $("projectForm").open = !bundled;
+  $("useBundled").hidden = bundled || !(await api.hasBundledConfig());
+  if (bundled) $("bundledUrl").textContent = config.url.replace("https://", "");
+
   if (config) {
     $("url").value = config.url;
     $("anon").value = config.anonKey;
@@ -102,6 +111,13 @@ $("saveProject").addEventListener("click", async () => {
     say($("projectMsg"), err.message, "bad");
     setStep("project", "bad", "Not saved.");
   }
+});
+
+$("useBundled").addEventListener("click", async () => {
+  say($("projectMsg"), "");
+  await api.clearConfig();
+  await loadForm();
+  await runChecks();
 });
 
 $("copyRedirect").addEventListener("click", async () => {

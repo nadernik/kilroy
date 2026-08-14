@@ -20,9 +20,81 @@ const DEFAULT_SETTINGS = {
 
 // ------------------------------------------------------------------ config --
 
+/**
+ * Project credentials shipped alongside the extension, if present.
+ *
+ * `extension/config.local.json` is gitignored and travels with the working copy
+ * rather than with the repo — which is the whole point. Installing on a second
+ * machine used to mean re-typing a project URL and a 46-character key before
+ * anything worked; now the file is already there and the only step left is
+ * signing in.
+ *
+ * Safe to bundle: the publishable key is designed to be public and is already
+ * visible in every request the extension makes. Row-level security, scoped to
+ * auth.uid(), is what protects the data — not the secrecy of this key. A
+ * `secret`/`service_role` key would be an entirely different matter, which is
+ * why loading one here is refused outright below.
+ *
+ * Read with fetch rather than import: a static import of a missing file kills
+ * the whole service worker at load, and this file is legitimately absent on a
+ * fresh clone.
+ */
+let bundledPromise = null;
+
+function loadBundledConfig() {
+  bundledPromise ??= (async () => {
+    try {
+      const res = await fetch(chrome.runtime.getURL("config.local.json"));
+      if (!res.ok) return null;
+      const raw = await res.json();
+
+      const url = String(raw?.url ?? "").trim().replace(/\/+$/, "");
+      const anonKey = String(raw?.anonKey ?? "").replace(/\s+/g, "");
+      if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url) || !anonKey) return null;
+
+      // Same refusal as setConfig(). A bundled file gets no more trust than a
+      // pasted value — less, if anything, since nobody watched it go in.
+      if (/^sb_secret_/.test(anonKey) || /"role":"service_role"/.test(atobSafe(anonKey))) {
+        console.warn("Kilroy: config.local.json holds a secret key. Ignoring it.");
+        return null;
+      }
+      return { url, anonKey, bundled: true };
+    } catch {
+      return null;  // absent or malformed: fall back to whatever was saved
+    }
+  })();
+  return bundledPromise;
+}
+
+/**
+ * Saved config wins over the bundled file, so the options page stays an
+ * override rather than a suggestion.
+ */
 export async function getConfig() {
   const { config } = await store.get("config");
-  return config ?? null;
+  return config ?? (await loadBundledConfig());
+}
+
+/** Whether the config in force came from the bundled file rather than the form. */
+export async function configIsBundled() {
+  const { config } = await store.get("config");
+  return !config && Boolean(await loadBundledConfig());
+}
+
+/** Whether a bundled file exists at all, override or no. */
+export async function hasBundledConfig() {
+  return Boolean(await loadBundledConfig());
+}
+
+/**
+ * Drop a saved override and fall back to the bundled project.
+ *
+ * The session goes with it: it was issued by the project being left behind, and
+ * a token from one project presented to another reads as a corrupt key rather
+ * than as the wrong account.
+ */
+export async function clearConfig() {
+  await store.remove(["config", "session"]);
 }
 
 export async function setConfig({ url, anonKey }) {

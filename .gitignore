@@ -3,11 +3,18 @@
 .env.*
 !.env.example
 *.key
+# Includes tools/kilroy-extension.pem — the private half of the extension
+# signing key. Its public half sits in manifest.json as "key" and pins the
+# extension ID; only this half needs protecting.
 *.pem
 supabase/.temp/
 supabase/.branches/
 
 # --- local config the user fills in ---
+# Holds a project URL and its publishable key. Not secret — the key is public by
+# design and RLS is what guards the data — but it names one person's backend, so
+# it travels with the working copy rather than with the repo.
+extension/config.local.json
 extension/src/config.local.js
 dashboard/config.local.js
 

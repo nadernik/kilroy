@@ -120,20 +120,30 @@
     <h2>Connect your Supabase project</h2>
     <p class="status" data-status>Checking…</p>
     <div class="body">
-      <label for="url">Project URL</label>
-      <input id="url" type="text" spellcheck="false" autocomplete="off"
-             placeholder="https://xxxxxxxx.supabase.co">
-      <label for="anon">Publishable (anon) key</label>
-      <input id="anon" type="text" spellcheck="false" autocomplete="off" placeholder="sb_publishable_…">
-      <small>
-        Both live under <em>Project Settings → API</em>. Use the <strong>copy button</strong> beside
-        the key — selecting the text copies a shortened preview that won't work.
-        Never paste a <code>secret</code> or <code>service_role</code> key here; those bypass
-        row-level security and Kilroy will refuse them.
-      </small>
-      <div class="actions">
-        <button id="saveProject">Save and check</button>
-      </div>
+      <p id="bundledNote" hidden style="margin:0 0 4px;font-size:13px;">
+        Using the project bundled with this copy of the extension
+        (<code id="bundledUrl">…</code>). Nothing to fill in.
+      </p>
+      <details id="projectForm">
+        <summary style="cursor:pointer;font-size:13px;color:var(--text-2);">
+          Point Kilroy at a different project
+        </summary>
+        <label for="url">Project URL</label>
+        <input id="url" type="text" spellcheck="false" autocomplete="off"
+               placeholder="https://xxxxxxxx.supabase.co">
+        <label for="anon">Publishable (anon) key</label>
+        <input id="anon" type="text" spellcheck="false" autocomplete="off" placeholder="sb_publishable_…">
+        <small>
+          Both live under <em>Project Settings → API</em>. Use the <strong>copy button</strong> beside
+          the key — selecting the text copies a shortened preview that won't work.
+          Never paste a <code>secret</code> or <code>service_role</code> key here; those bypass
+          row-level security and Kilroy will refuse them.
+        </small>
+        <div class="actions">
+          <button id="saveProject">Save and check</button>
+          <button class="ghost" id="useBundled" hidden>Back to the bundled project</button>
+        </div>
+      </details>
       <div class="msg" id="projectMsg"></div>
     </div>
   </section>
@@ -188,7 +198,13 @@ supabase functions deploy r  --no-verify-jwt</code>
         <li>In Google Cloud, that client's authorised redirect URI is
             <code id="callbackUrl">https://&lt;project&gt;.supabase.co/auth/v1/callback</code>.</li>
       </ol>
-      <small>Skip this only if you plan to sign in with an email and password instead.</small>
+      <small>
+        This URL is derived from the extension's ID, and the ID is pinned by the
+        <code>key</code> field in <code>manifest.json</code> — so it is the same on every
+        machine you load this folder on. Whitelist it once and every future install is
+        just a sign-in. Remove that field and Chrome invents a fresh ID per machine,
+        which is what made this a per-computer chore.
+      </small>
     </div>
   </section>
 

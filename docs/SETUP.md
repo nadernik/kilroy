@@ -5,6 +5,46 @@ About fifteen minutes. Everything here fits inside Supabase's free tier.
 You need: a Google account using Gmail on the web, a Supabase account, Chrome (or
 any Chromium browser), and the [Supabase CLI](https://supabase.com/docs/guides/cli).
 
+## Already set this up once? Start here
+
+On a second (or fifth) computer there is nothing to configure:
+
+1. `chrome://extensions` → Developer mode → **Load unpacked** → the `extension/` folder
+2. Kilroy icon → Settings → **Sign in with Google**
+
+That's it. Two things make it that short, and both are worth knowing about
+because both are easy to break:
+
+**`extension/config.local.json`** carries the project URL and publishable key, so
+there is nothing to paste. It is gitignored deliberately — it names your backend
+— which means it travels with the *working copy*, not with the repo. Sync the
+folder (Dropbox, Syncthing, a USB stick) and it comes along; `git clone` alone
+will not bring it, and the options page falls back to asking you to type it in.
+
+**`manifest.json` has a `key` field** pinning the extension ID to
+`ccgiabiiglmhioaaionkhjhcihmpampc` on every machine. Without it Chrome invents a
+random ID per install, the OAuth redirect URL changes with it, and Google
+sign-in dies at the last step on each new computer until you go and whitelist
+the new URL. Pinned, you whitelist one URL once — Supabase → **Authentication →
+URL Configuration → Redirect URLs**, add
+`https://ccgiabiiglmhioaaionkhjhcihmpampc.chromiumapp.org/` — and never think
+about it again. The extension's options page shows that URL with a copy button.
+
+The private half of that key is `tools/kilroy-extension.pem`. It is only needed
+to pack a `.crx`, it is gitignored, and losing it costs you nothing unless you
+publish to the Web Store. Regenerating it changes the extension ID and puts you
+back to whitelisting a redirect URL.
+
+> Forking this? Generate your own key rather than inheriting this one:
+> ```bash
+> openssl genrsa 2048 > tools/kilroy-extension.pem
+> ```
+> then put the base64 of `openssl rsa -in tools/kilroy-extension.pem -pubout -outform DER`
+> into `manifest.json` as `key`, and whitelist your own redirect URL. Chrome shows
+> you the resulting ID as soon as you load the folder.
+
+The rest of this document is the from-scratch path.
+
 ---
 
 ## 1. Create the Supabase project
@@ -33,11 +73,14 @@ the deployment, each person's data stays theirs.
 
 ## 3. Run the schema
 
-**SQL Editor → New query.** Paste all of `supabase/migrations/0001_init.sql` and
-run it.
+**SQL Editor → New query.** Run every file in `supabase/migrations/` **in
+numerical order**, 0001 through 0004, one query at a time.
 
-That creates the tables, the RLS policies, the `message_stats` view, and the
-`record_open` / `record_click` / `note_self_view` functions.
+0001 creates the tables, the RLS policies, the `message_stats` view, and the
+`record_open` / `record_click` / `note_self_view` functions. The rest are not
+optional extras: 0002 narrows the self-view windows that otherwise erase genuine
+opens, and 0003–0004 add the column that thread-list badges are looked up by.
+Stop at 0001 and Kilroy runs, but wrongly.
 
 Verify:
 
@@ -91,6 +134,10 @@ registration. Loading unpacked is free and works indefinitely; the only cost is 
 Click the Kilroy icon → **Settings**, or right-click the icon → *Options*.
 
 - Paste your **Project URL** and **anon key**, save
+- Then save them to `extension/config.local.json` as
+  `{"url": "https://<ref>.supabase.co", "anonKey": "sb_publishable_…"}`, so the
+  next machine you load this folder on needs neither. The options page reads that
+  file when nothing has been saved by hand, and shows the form as an override
 - Sign in with the user from step 2
 - Leave **Track opens** on. **Track link clicks** is off by default — it rewrites
   hrefs, so recipients see a `supabase.co` URL on hover. Turn it on when you want
@@ -188,6 +235,13 @@ selectors in `content.js` occasionally need adjusting.
 
 **Chip says "Not signed in".** Options → sign in. The session refreshes itself,
 but a password change invalidates it.
+
+**Google sign-in returns "came back without a session".** The redirect URL isn't
+whitelisted. Compare the URL on the options page against
+**Authentication → URL Configuration → Redirect URLs** — they must match
+exactly, trailing slash included. If the URL on the options page is *not*
+`https://ccgiabiiglmhioaaionkhjhcihmpampc.chromiumapp.org/`, the `key` field has
+gone missing from `manifest.json` and Chrome has assigned a random ID.
 
 **Opens never appear.** Confirm the function was deployed with `--no-verify-jwt`
 and curl it as in step 4. Then check the function logs in the dashboard.
