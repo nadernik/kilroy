@@ -5,83 +5,224 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kilroy</title>
 <style>
+  /* Palette roles. Light on :root, dark redefined under the media query, so the
+     chart body is written against roles and never raw hex. */
   :root {
-    color-scheme: light dark;
-    --bg: #fbfbfa; --card: #fff; --fg: #1f1f1f; --muted: #6b6b6b;
-    --line: #e4e4e2; --accent: #1a73e8; --ok: #137333; --warn: #b06000; --bad: #c5221f;
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --text:        #0b0b0b;
+    --text-2:      #52514e;
+    --muted:       #898781;
+    --grid:        #e1e0d9;
+    --axis:        #c3c2b7;
+    --series:      #2a78d6;
+    --border:      rgba(11,11,11,0.10);
+    --good:        #0ca30c;
+    --warning:     #fab219;
+    --critical:    #d03b3b;
+    --wash:        rgba(42,120,214,0.08);
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #17181a; --card: #202124; --fg: #e8eaed; --muted: #9aa0a6;
-            --line: #33363a; --accent: #8ab4f8; --ok: #81c995; --warn: #fdd663; --bad: #f28b82; }
+    :root {
+      color-scheme: dark;
+      --page:      #0d0d0d;
+      --surface:   #1a1a19;
+      --text:      #ffffff;
+      --text-2:    #c3c2b7;
+      --muted:     #898781;
+      --grid:      #2c2c2a;
+      --axis:      #383835;
+      --series:    #3987e5;
+      --border:    rgba(255,255,255,0.10);
+      --good:      #0ca30c;
+      --warning:   #fab219;
+      --critical:  #d03b3b;
+      --wash:      rgba(57,135,229,0.12);
+    }
   }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 14px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  body {
+    margin: 0; background: var(--page); color: var(--text);
+    font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 20px 80px; }
-  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
-  h1 { font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
-  .lede { color: var(--muted); margin: 0 0 28px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
-  label { display: block; font-weight: 500; margin: 12px 0 5px; font-size: 13px; }
-  input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px;
-          background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; }
-  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  button { margin-top: 16px; padding: 9px 18px; border: 0; border-radius: 7px;
-           background: var(--accent); color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
-  @media (prefers-color-scheme: dark) { button { color: #202124; } }
-  button.link { background: none; color: var(--accent); padding: 0; margin: 0;
-                font-weight: 400; font-size: 13px; }
-  .msg { margin-top: 12px; font-size: 13px; color: var(--bad); min-height: 19px; }
-  small { color: var(--muted); font-size: 12px; display: block; margin-top: 5px; }
 
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-           gap: 12px; margin-bottom: 22px; }
-  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 15px 17px; }
-  .tile .n { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
-  .tile .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 3px; }
+  .mark {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--series);
+    color: var(--surface); display: grid; place-items: center;
+    font-weight: 700; font-size: 14px;
+  }
+  h1 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .sub { color: var(--text-2); margin: 0 0 26px 39px; font-size: 13px; }
 
-  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
-  table { width: 100%; border-collapse: collapse; min-width: 780px; }
-  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+
+  /* ---------- sign in ---------- */
+  #login { max-width: 460px; }
+  label { display: block; font-weight: 500; margin: 12px 0 4px; font-size: 13px; }
+  label:first-child { margin-top: 0; }
+  input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--page); color: var(--text);
+    font: inherit; font-size: 13px;
+  }
+  input:focus { outline: 2px solid var(--series); outline-offset: -1px; }
+  button {
+    padding: 8px 15px; border: 0; border-radius: 6px; background: var(--series);
+    color: #fff; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  button.ghost {
+    background: transparent; color: var(--series); border: 1px solid var(--border);
+  }
+  .err { color: var(--critical); font-size: 13px; margin-top: 12px; min-height: 18px; }
+  small { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  /* ---------- filter row: one row, above everything it scopes ---------- */
+  .filters {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    background: var(--surface); color: var(--text-2); border-radius: 0;
+    border-right: 1px solid var(--border); font-weight: 400;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--wash); color: var(--series); font-weight: 500; }
+  .spacer { flex: 1; }
+  .who { color: var(--muted); font-size: 12.5px; }
+
+  /* ---------- stat tiles ---------- */
+  .tiles {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 18px;
+  }
+  .tile { background: var(--surface); border: 1px solid var(--border);
+          border-radius: 12px; padding: 15px 17px; }
+  .tile .k { color: var(--text-2); font-size: 12px; }
+  /* Proportional figures: tabular-nums makes a standalone 121 look loose. */
+  .tile .v { font-size: 27px; font-weight: 600; letter-spacing: -.02em; margin-top: 2px; }
+
+  /* ---------- charts ---------- */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 820px) { .charts { grid-template-columns: 1fr; } }
+  .card h2 { font-size: 14px; margin: 0 0 1px; font-weight: 600; }
+  .card .cap { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tick { fill: var(--muted); font-size: 10px; }
+  .tick.num { font-variant-numeric: tabular-nums; }
+  .barlabel { fill: var(--text-2); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .rowlabel { fill: var(--text-2); font-size: 11px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 26px 0; text-align: center; }
+
+  #tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity 90ms;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
+    padding: 7px 10px; font-size: 12px; line-height: 1.45; z-index: 20;
+    box-shadow: 0 3px 14px rgba(0,0,0,.14); max-width: 260px;
+  }
+  #tip b { font-weight: 600; }
+  #tip .n { font-variant-numeric: tabular-nums; }
+
+  /* ---------- table ---------- */
+  .scroll { overflow-x: auto; border: 1px solid var(--border);
+            border-radius: 12px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  th, td { text-align: left; padding: 11px 15px; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
        color: var(--muted); font-weight: 600; white-space: nowrap; }
+  tbody tr.msg { cursor: pointer; }
+  tbody tr.msg:hover { background: var(--wash); }
   tbody tr:last-child td { border-bottom: 0; }
-  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
-  .subject { font-weight: 500; max-width: 320px; }
-  .to { color: var(--muted); font-size: 12px; max-width: 320px;
+  .subj { font-weight: 500; max-width: 300px; }
+  .to { color: var(--text-2); font-size: 12.5px; max-width: 260px;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .ok { color: var(--ok); font-weight: 500; }
-  .cold { color: var(--muted); }
-  .warn { color: var(--warn); }
-  .when { white-space: nowrap; color: var(--muted); font-size: 12px; }
-  .note { margin-top: 22px; color: var(--muted); font-size: 12.5px; }
+  .when { white-space: nowrap; color: var(--text-2); font-size: 12.5px; }
+  .dim { color: var(--muted); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px;
+    border-radius: 9px; font-size: 11px; font-weight: 500;
+    background: var(--page); color: var(--text-2);
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.open     { color: var(--good); }
+  .pill.prefetch { color: var(--warning); }
+  .pill.self     { color: var(--muted); }
+  .pill.dup      { color: var(--muted); }
+
+  .detail { background: var(--page); }
+  .detail td { padding: 0; }
+  .detail .inner { padding: 14px 18px; }
+  .detail h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+               color: var(--muted); margin: 0 0 9px; font-weight: 600; }
+  .ev { display: grid; grid-template-columns: 140px 110px 1fr; gap: 8px 14px;
+        font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .ev:last-child { border-bottom: 0; }
+  .ev .t { font-variant-numeric: tabular-nums; color: var(--text-2); }
+  .ev .r { color: var(--muted); }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 20px; }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  a { color: var(--series); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>Kilroy</h1>
-    <span class="lede" id="who"></span>
-  </header>
-  <p class="lede">Who opened what, and when.</p>
+  <div class="brand"><div class="mark">K</div><h1>Kilroy</h1></div>
+  <p class="sub">Who opened what, and when.</p>
 
   <div class="card" id="login">
     <label for="url">Supabase project URL</label>
-    <input id="url" type="text" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
-    <label for="anon">Anon key</label>
-    <input id="anon" type="text" spellcheck="false" placeholder="eyJhbGciOi…">
+    <input id="url" type="text" spellcheck="false" placeholder="https://xxxxxxxx.supabase.co">
+    <label for="anon">Publishable key</label>
+    <input id="anon" type="text" spellcheck="false" placeholder="sb_publishable_…">
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="username">
     <label for="password">Password</label>
     <input id="password" type="password" autocomplete="current-password">
-    <small>Stored in this browser's localStorage only. Nothing is sent anywhere but your own project.</small>
-    <button id="go">Sign in</button>
-    <div class="msg" id="msg"></div>
+    <small>
+      Held in this browser's localStorage and sent only to your own project.
+      If you signed into the extension with Google, create an email/password user
+      in Supabase to read the dashboard, or open it from the extension instead.
+    </small>
+    <div style="margin-top:14px"><button id="go">Sign in</button></div>
+    <div class="err" id="err"></div>
   </div>
 
   <div id="app" hidden>
+    <div class="filters">
+      <div class="seg" id="range">
+        <button data-days="7">7 days</button>
+        <button data-days="30" aria-pressed="true">30 days</button>
+        <button data-days="90">90 days</button>
+        <button data-days="0">All</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="who" id="who"></span>
+      <button class="ghost" id="out">Sign out</button>
+    </div>
+
     <div class="tiles" id="tiles"></div>
+
+    <div class="charts">
+      <div class="card">
+        <h2>Opens per day</h2>
+        <p class="cap">Confirmed opens only — machine fetches excluded.</p>
+        <div id="chartTime"></div>
+      </div>
+      <div class="card">
+        <h2>Opens by recipient</h2>
+        <p class="cap">Across every tracked message in range.</p>
+        <div id="chartWho"></div>
+      </div>
+    </div>
+
     <div class="scroll">
       <table>
         <thead>
@@ -93,32 +234,38 @@
         <tbody id="rows"></tbody>
       </table>
     </div>
+
     <p class="note">
-      “Machine fetch” means something loaded the pixel that almost certainly wasn't a person —
-      a security scanner, Apple Mail's privacy prefetch, or your own client. Those are excluded
-      from the open counts. See <code>docs/ACCURACY.md</code>.
-      <button class="link" id="out">Sign out</button>
+      Click any row to see every fetch recorded for it, and why each was counted or
+      discounted. An open is an image being loaded, which is not the same as a person
+      reading — <code>docs/ACCURACY.md</code> covers what each number can support.
     </p>
   </div>
 </div>
+
+<div id="tip"></div>
 
 <script type="module">
 const $ = (id) => document.getElementById(id);
 const LS = "kilroy.dashboard";
 
-let cfg = null;      // { url, anonKey }
-let session = null;  // { access_token, refresh_token, expires_at, email }
+let cfg = null;       // { url, anonKey }
+let session = null;
+let messages = [];    // message_stats rows
+let opens = [];       // raw open events
+let days = 30;
 
+// ------------------------------------------------------------------ storage --
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(LS) ?? "null");
     if (saved) { cfg = saved.cfg ?? null; session = saved.session ?? null; }
   } catch { /* corrupt entry: start fresh */ }
 }
-function save() { localStorage.setItem(LS, JSON.stringify({ cfg, session })); }
-
+const save = () => localStorage.setItem(LS, JSON.stringify({ cfg, session }));
 const now = () => Math.floor(Date.now() / 1000);
 
+// --------------------------------------------------------------------- api --
 async function auth(grant, body) {
   const res = await fetch(`${cfg.url}/auth/v1/token?grant_type=${grant}`, {
     method: "POST",
@@ -153,66 +300,318 @@ async function rest(path) {
   return data;
 }
 
-const fmt = (iso) => iso ? new Date(iso).toLocaleString(undefined,
-  { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+// ------------------------------------------------------------------ helpers --
+const dayKey = (d) => {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+};
+const fmtDate = (iso) => iso
+  ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+  : "";
+const shortDay = (key) => {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+const el = (tag, cls, text) => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+const svgEl = (tag, attrs = {}) => {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  return node;
+};
 
-function cell(row, text, cls) {
-  const td = document.createElement("td");
-  if (cls) td.className = cls;
-  td.textContent = text;
-  row.appendChild(td);
-  return td;
+// Nice round axis maximum, so ticks land on clean numbers.
+function niceMax(value) {
+  if (value <= 4) return Math.max(1, value);
+  const pow = 10 ** Math.floor(Math.log10(value));
+  return Math.ceil(value / (pow / 2)) * (pow / 2);
 }
 
-function tile(n, k) {
-  const el = document.createElement("div");
-  el.className = "tile";
-  const num = document.createElement("div"); num.className = "n"; num.textContent = n;
-  const key = document.createElement("div"); key.className = "k"; key.textContent = k;
-  el.append(num, key);
-  return el;
+function inRange(iso) {
+  if (!days) return true;
+  return new Date(iso).getTime() >= Date.now() - days * 86400_000;
 }
 
-function render(rows) {
-  const sent = rows.length;
-  const opened = rows.filter((r) => Number(r.open_count) > 0).length;
-  const clicks = rows.reduce((a, r) => a + Number(r.click_count ?? 0), 0);
-  const rate = sent ? Math.round((opened / sent) * 100) : 0;
+// ----------------------------------------------------------------- tooltip --
+const tip = $("tip");
+function showTip(evt, html) {
+  tip.innerHTML = html;
+  tip.style.opacity = "1";
+  const box = tip.getBoundingClientRect();
+  let x = evt.clientX + 14;
+  let y = evt.clientY - box.height - 10;
+  if (x + box.width > innerWidth - 8) x = evt.clientX - box.width - 14;
+  if (y < 8) y = evt.clientY + 16;
+  tip.style.left = `${x}px`;
+  tip.style.top = `${y}px`;
+}
+const hideTip = () => { tip.style.opacity = "0"; };
+
+// ------------------------------------------------------------------ charts --
+
+/**
+ * Opens per day. One series, so no legend — the card title says what's plotted.
+ * Columns rather than a line: the data is sparse daily counts, and a line drawn
+ * through a run of zeros implies a continuity that isn't there.
+ */
+function drawTimeChart(host, events) {
+  host.replaceChildren();
+
+  const span = days || 30;
+  const buckets = new Map();
+  for (let i = span - 1; i >= 0; i--) {
+    buckets.set(dayKey(Date.now() - i * 86400_000), 0);
+  }
+  for (const e of events) {
+    const key = dayKey(e.opened_at);
+    if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1);
+  }
+
+  const data = [...buckets.entries()];
+  if (!data.some(([, n]) => n > 0)) {
+    host.append(el("p", "empty", "No confirmed opens in this range."));
+    return;
+  }
+
+  const W = 720, H = 200, padL = 30, padR = 6, padT = 8, padB = 24;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const max = niceMax(Math.max(...data.map(([, n]) => n)));
+  const band = plotW / data.length;
+  // Cap thickness and always leave the 2px surface gap between neighbours.
+  const barW = Math.max(3, Math.min(24, band - 2));
+  const y = (v) => padT + plotH - (v / max) * plotH;
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+                             "aria-label": "Confirmed opens per day" });
+
+  // Gridlines: solid hairlines, one step off surface, recessive.
+  const ticks = max <= 4 ? max : 4;
+  for (let i = 0; i <= ticks; i++) {
+    const value = Math.round((max / ticks) * i);
+    svg.append(svgEl("line", {
+      x1: padL, x2: W - padR, y1: y(value), y2: y(value),
+      stroke: i === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1,
+    }));
+    const label = svgEl("text", { x: padL - 7, y: y(value) + 3.5, "text-anchor": "end" });
+    label.setAttribute("class", "tick num");
+    label.textContent = value;
+    svg.append(label);
+  }
+
+  data.forEach(([key, n], i) => {
+    const x = padL + i * band + (band - barW) / 2;
+    if (n > 0) {
+      // 4px rounded data-end, square at the baseline.
+      const h = plotH - (y(n) - padT);
+      const r = Math.min(4, h, barW / 2);
+      svg.append(svgEl("path", {
+        d: `M${x},${padT + plotH} L${x},${y(n) + r} Q${x},${y(n)} ${x + r},${y(n)} ` +
+           `L${x + barW - r},${y(n)} Q${x + barW},${y(n)} ${x + barW},${y(n) + r} ` +
+           `L${x + barW},${padT + plotH} Z`,
+        fill: "var(--series)",
+      }));
+    }
+    // Hit area spans the full band and height, so hovering never needs precision.
+    const hit = svgEl("rect", {
+      x: padL + i * band, y: padT, width: band, height: plotH, fill: "transparent",
+    });
+    hit.addEventListener("pointermove", (e) =>
+      showTip(e, `<b>${shortDay(key)}</b><br><span class="n">${n}</span> open${n === 1 ? "" : "s"}`));
+    hit.addEventListener("pointerleave", hideTip);
+    svg.append(hit);
+
+    const every = Math.ceil(data.length / 6);
+    if (i % every === 0) {
+      const t = svgEl("text", { x: padL + i * band + band / 2, y: H - 8, "text-anchor": "middle" });
+      t.setAttribute("class", "tick");
+      t.textContent = shortDay(key);
+      svg.append(t);
+    }
+  });
+
+  host.append(svg);
+}
+
+/**
+ * Opens by recipient. Horizontal because addresses are long, one hue for every
+ * bar — darkening by value would double-encode length as colour and spend the
+ * only free channel on something the bar already shows.
+ */
+function drawRecipientChart(host, rows) {
+  host.replaceChildren();
+
+  const totals = new Map();
+  for (const m of rows) {
+    const n = Number(m.open_count ?? 0);
+    if (!n) continue;
+    for (const addr of m.recipients ?? []) {
+      totals.set(addr, (totals.get(addr) ?? 0) + n);
+    }
+  }
+
+  const data = [...totals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!data.length) {
+    host.append(el("p", "empty", "No confirmed opens in this range."));
+    return;
+  }
+
+  const W = 720, rowH = 30, padL = 190, padR = 44, padT = 4;
+  const H = padT + data.length * rowH;
+  const plotW = W - padL - padR;
+  const max = niceMax(Math.max(...data.map(([, n]) => n)));
+  const barH = Math.min(24, rowH - 8);
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+                             "aria-label": "Confirmed opens by recipient" });
+
+  data.forEach(([addr, n], i) => {
+    const y = padT + i * rowH + (rowH - barH) / 2;
+    const w = Math.max(2, (n / max) * plotW);
+    const r = Math.min(4, w, barH / 2);
+
+    const label = svgEl("text", { x: padL - 10, y: y + barH / 2 + 4, "text-anchor": "end" });
+    label.setAttribute("class", "rowlabel");
+    // Measured: a 29-character address lands 19px from the left edge, so the
+    // cap is set below that rather than at the point it starts clipping.
+    label.textContent = addr.length > 26 ? `${addr.slice(0, 25)}…` : addr;
+    svg.append(label);
+
+    svg.append(svgEl("path", {
+      d: `M${padL},${y} L${padL + w - r},${y} Q${padL + w},${y} ${padL + w},${y + r} ` +
+         `L${padL + w},${y + barH - r} Q${padL + w},${y + barH} ${padL + w - r},${y + barH} ` +
+         `L${padL},${y + barH} Z`,
+      fill: "var(--series)",
+    }));
+
+    // Value at the tip, outside the bar, so it can never be clipped by it.
+    const value = svgEl("text", { x: padL + w + 8, y: y + barH / 2 + 4 });
+    value.setAttribute("class", "barlabel");
+    value.textContent = n;
+    svg.append(value);
+
+    const hit = svgEl("rect", { x: 0, y: padT + i * rowH, width: W, height: rowH, fill: "transparent" });
+    hit.addEventListener("pointermove", (e) =>
+      showTip(e, `<b>${addr}</b><br><span class="n">${n}</span> open${n === 1 ? "" : "s"}`));
+    hit.addEventListener("pointerleave", hideTip);
+    svg.append(hit);
+  });
+
+  host.append(svg);
+}
+
+// ------------------------------------------------------------------- table --
+function tile(value, key) {
+  const node = el("div", "tile");
+  node.append(el("div", "v", value), el("div", "k", key));
+  return node;
+}
+
+async function openDetail(tr, token) {
+  const existing = tr.nextElementSibling;
+  if (existing?.classList.contains("detail")) { existing.remove(); return; }
+  document.querySelectorAll("tr.detail").forEach((n) => n.remove());
+
+  const row = el("tr", "detail");
+  const cell = el("td");
+  cell.colSpan = 7;
+  const inner = el("div", "inner");
+  inner.append(el("h3", null, "Every fetch recorded"));
+  inner.append(el("p", "dim", "Loading…"));
+  cell.append(inner);
+  row.append(cell);
+  tr.after(row);
+
+  try {
+    const data = await rest(
+      `messages?select=token,opens(opened_at,classification,reason,proxy)` +
+      `&token=eq.${encodeURIComponent(token)}`,
+    );
+    const events = (data?.[0]?.opens ?? [])
+      .sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at));
+
+    inner.replaceChildren(el("h3", null, "Every fetch recorded"));
+    if (!events.length) {
+      inner.append(el("p", "dim", "Nothing has fetched this pixel yet."));
+      return;
+    }
+    for (const e of events) {
+      const line = el("div", "ev");
+      line.append(el("span", "t", fmtDate(e.opened_at)));
+      const pill = el("span", `pill ${e.classification}`, e.classification);
+      const wrap = el("span");
+      wrap.append(pill);
+      line.append(wrap);
+      line.append(el("span", "r", e.reason ?? (e.proxy ? `via ${e.proxy}` : "counted")));
+      inner.append(line);
+    }
+  } catch (err) {
+    inner.replaceChildren(el("h3", null, "Every fetch recorded"), el("p", "dim", err.message));
+  }
+}
+
+function render() {
+  const rows = messages.filter((m) => inRange(m.sent_at));
+  const events = opens.filter((o) => o.classification === "open" && inRange(o.opened_at));
+
+  const opened = rows.filter((m) => Number(m.open_count) > 0).length;
+  const clicks = rows.reduce((a, m) => a + Number(m.click_count ?? 0), 0);
+  const rate = rows.length ? Math.round((opened / rows.length) * 100) : 0;
 
   $("tiles").replaceChildren(
-    tile(sent, "tracked"),
+    tile(rows.length, "tracked"),
     tile(opened, "opened"),
     tile(`${rate}%`, "open rate"),
     tile(clicks, "clicks"),
   );
 
+  drawTimeChart($("chartTime"), events);
+  drawRecipientChart($("chartWho"), rows);
+
   const body = $("rows");
   body.replaceChildren();
 
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    cell(tr, r.subject || "(no subject)", "subject");
-    cell(tr, (r.recipients ?? []).join(", ") || "—", "to");
-
-    const opens = Number(r.open_count ?? 0);
-    const pre = Number(r.prefetch_count ?? 0);
-    if (opens > 0) cell(tr, String(opens), "num ok");
-    else if (pre > 0) cell(tr, "machine fetch", "num warn");
-    else cell(tr, "—", "num cold");
-
-    cell(tr, fmt(r.first_open_at), "when");
-    cell(tr, fmt(r.last_open_at), "when");
-    cell(tr, String(r.click_count ?? 0), "num");
-    cell(tr, fmt(r.sent_at), "when");
-    body.appendChild(tr);
-  }
-
   if (!rows.length) {
-    const tr = document.createElement("tr");
-    const td = cell(tr, "Nothing tracked yet.", "cold");
+    const tr = el("tr");
+    const td = el("td", "dim", "Nothing tracked in this range.");
     td.colSpan = 7;
-    body.appendChild(tr);
+    tr.append(td);
+    body.append(tr);
+    return;
   }
+
+  for (const m of rows) {
+    const tr = el("tr", "msg");
+    tr.append(el("td", "subj", m.subject || "(no subject)"));
+    tr.append(el("td", "to", (m.recipients ?? []).join(", ") || "—"));
+
+    const nOpens = Number(m.open_count ?? 0);
+    const nPre = Number(m.prefetch_count ?? 0);
+    const opensCell = el("td", "num");
+    if (nOpens > 0) opensCell.append(el("span", "pill open", String(nOpens)));
+    else if (nPre > 0) opensCell.append(el("span", "pill prefetch", "machine only"));
+    else opensCell.append(el("span", "dim", "—"));
+    tr.append(opensCell);
+
+    tr.append(el("td", "when", fmtDate(m.first_open_at)));
+    tr.append(el("td", "when", fmtDate(m.last_open_at)));
+    tr.append(el("td", "num", String(m.click_count ?? 0)));
+    tr.append(el("td", "when", fmtDate(m.sent_at)));
+
+    tr.addEventListener("click", () => openDetail(tr, m.token));
+    body.append(tr);
+  }
+}
+
+async function loadData() {
+  [messages, opens] = await Promise.all([
+    rest("message_stats?select=*&order=sent_at.desc&limit=500"),
+    rest("opens?select=opened_at,classification&order=opened_at.desc&limit=5000"),
+  ]);
+  render();
 }
 
 async function show() {
@@ -220,48 +619,57 @@ async function show() {
   $("app").hidden = false;
   $("who").textContent = session?.email ?? "";
   try {
-    render(await rest("message_stats?select=*&order=sent_at.desc&limit=500"));
+    await loadData();
   } catch (err) {
     $("app").hidden = true;
     $("login").hidden = false;
-    $("msg").textContent = err.message;
+    $("err").textContent = err.message;
   }
 }
+
+// ----------------------------------------------------------------- wiring --
+$("range").addEventListener("click", (e) => {
+  const button = e.target.closest("button[data-days]");
+  if (!button) return;
+  days = Number(button.dataset.days);
+  [...$("range").children].forEach((b) =>
+    b.setAttribute("aria-pressed", String(b === button)));
+  render();
+});
 
 $("go").addEventListener("click", async () => {
   const url = $("url").value.trim().replace(/\/+$/, "");
   const anonKey = $("anon").value.replace(/\s+/g, "");
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
-    $("msg").textContent = "Project URL should look like https://xxxx.supabase.co";
+    $("err").textContent = "Project URL should look like https://xxxx.supabase.co";
     return;
   }
-  // Same trap as the extension: pasting the dashboard's masked preview puts a
-  // U+2026 in a header and fetch() fails with an unreadable encoding error.
+  // Same trap as the extension: the dashboard's masked key preview contains a
+  // real U+2026, and a header value can't hold one.
   if (/…|\.{3}/.test(anonKey)) {
-    $("msg").textContent = "That's the shortened preview of the key, not the key. Use the copy button beside it.";
+    $("err").textContent = "That's the shortened preview of the key, not the key. Use the copy button beside it.";
     return;
   }
   if (/[^A-Za-z0-9._-]/.test(anonKey)) {
-    $("msg").textContent = "The key has a stray character in it — re-copy it from the API settings page.";
+    $("err").textContent = "The key has a stray character in it — re-copy it from API settings.";
     return;
   }
+
   cfg = { url, anonKey };
-  $("msg").textContent = "Signing in…";
+  $("err").textContent = "Signing in…";
   try {
     session = await auth("password", { email: $("email").value.trim(), password: $("password").value });
     $("password").value = "";
     save();
-    $("msg").textContent = "";
+    $("err").textContent = "";
     await show();
   } catch (err) {
-    $("msg").textContent = err.message;
+    $("err").textContent = err.message;
   }
 });
 
-$("out").addEventListener("click", () => {
-  session = null; save();
-  location.reload();
-});
+$("out").addEventListener("click", () => { session = null; save(); location.reload(); });
+addEventListener("scroll", hideTip, { passive: true });
 
 load();
 if (cfg) { $("url").value = cfg.url; $("anon").value = cfg.anonKey; }

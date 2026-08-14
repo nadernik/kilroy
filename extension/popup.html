@@ -1,54 +1,96 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Kilroy</title>
-  <style>
+<meta charset="utf-8">
+<title>Kilroy</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --text: #0b0b0b; --text-2: #52514e;
+    --muted: #898781; --border: rgba(11,11,11,0.10); --series: #2a78d6;
+    --good: #0ca30c; --warning: #fab219; --wash: rgba(42,120,214,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
     :root {
-      color-scheme: light dark;
-      --bg: #fff; --fg: #202124; --muted: #5f6368; --line: #e8eaed;
-      --accent: #1a73e8; --ok: #137333; --warn: #b06000;
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --text: #ffffff; --text-2: #c3c2b7;
+      --muted: #898781; --border: rgba(255,255,255,0.10); --series: #3987e5;
+      --good: #0ca30c; --warning: #fab219; --wash: rgba(57,135,229,0.12);
     }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --line: #3c4043;
-              --accent: #8ab4f8; --ok: #81c995; --warn: #fdd663; }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; width: 390px; max-height: 520px; overflow-y: auto;
-      background: var(--bg); color: var(--fg);
-      font: 13px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    }
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 13px 15px; border-bottom: 1px solid var(--line);
-      position: sticky; top: 0; background: var(--bg);
-    }
-    header strong { font-size: 14px; }
-    header a { color: var(--accent); text-decoration: none; font-size: 12px; }
-    header a:hover { text-decoration: underline; }
-    .empty { padding: 32px 20px; text-align: center; color: var(--muted); }
-    ul { list-style: none; margin: 0; padding: 0; }
-    li { padding: 11px 15px; border-bottom: 1px solid var(--line); }
-    .subject {
-      font-weight: 500; white-space: nowrap; overflow: hidden;
-      text-overflow: ellipsis; margin-bottom: 2px;
-    }
-    .to { color: var(--muted); font-size: 12px; white-space: nowrap;
-          overflow: hidden; text-overflow: ellipsis; }
-    .stat { margin-top: 5px; font-size: 12px; display: flex; gap: 9px; flex-wrap: wrap; }
-    .stat b { font-weight: 500; }
-    .opened { color: var(--ok); }
-    .cold { color: var(--muted); }
-    .machine { color: var(--warn); }
-  </style>
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; width: 380px; background: var(--surface); color: var(--text);
+    font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  header {
+    display: flex; align-items: center; gap: 9px; padding: 11px 14px;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0;
+    background: var(--surface); z-index: 2;
+  }
+  .mark {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--series);
+    color: var(--surface); display: grid; place-items: center;
+    font-weight: 700; font-size: 11px; flex: none;
+  }
+  header b { font-size: 13px; font-weight: 600; }
+  header .sp { flex: 1; }
+  header a { color: var(--series); text-decoration: none; font-size: 12px; }
+  header a:hover { text-decoration: underline; }
+
+  .search { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .search input {
+    width: 100%; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--page); color: var(--text); font: inherit; font-size: 12.5px;
+  }
+  .search input:focus { outline: 2px solid var(--series); outline-offset: -1px; }
+
+  .list { max-height: 400px; overflow-y: auto; }
+  .row { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: var(--wash); }
+  .row[data-nothread="true"] { cursor: default; }
+
+  .subject {
+    font-weight: 500; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; margin-bottom: 1px;
+  }
+  .to {
+    color: var(--text-2); font-size: 12px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .meta { display: flex; gap: 8px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; padding: 0 7px;
+    border-radius: 9px; font-size: 11px; font-weight: 500; height: 17px;
+    background: var(--page); color: var(--muted);
+  }
+  .pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .pill.open { color: var(--good); }
+  .pill.machine { color: var(--warning); }
+  .when { color: var(--muted); font-size: 11.5px; }
+
+  .empty { padding: 30px 22px; text-align: center; color: var(--muted); font-size: 12.5px; }
+  .empty b { display: block; color: var(--text); font-weight: 500; margin-bottom: 4px; font-size: 13px; }
+  .empty button {
+    margin-top: 12px; padding: 6px 13px; border: 0; border-radius: 6px;
+    background: var(--series); color: #fff; font: inherit; font-size: 12.5px;
+    font-weight: 500; cursor: pointer;
+  }
+</style>
 </head>
 <body>
   <header>
-    <strong>Kilroy</strong>
+    <div class="mark">K</div>
+    <b>Kilroy</b>
+    <span class="sp"></span>
     <a href="#" id="settings">Settings</a>
   </header>
-  <div id="body"><div class="empty">Loading…</div></div>
+  <div class="search" id="searchWrap" hidden>
+    <input id="q" type="search" placeholder="Filter by subject or recipient" autocomplete="off">
+  </div>
+  <div class="list" id="list"></div>
 <script type="module" src="src/popup.js"></script>
 </body>
 </html>

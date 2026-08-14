@@ -19,3 +19,6 @@ build/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# local chart preview harness
+dashboard/_preview.html

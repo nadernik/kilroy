@@ -1,6 +1,10 @@
 import * as api from "./api.js";
 
-const body = document.getElementById("body");
+const list = document.getElementById("list");
+const searchWrap = document.getElementById("searchWrap");
+const q = document.getElementById("q");
+
+let rows = [];
 
 document.getElementById("settings").addEventListener("click", (e) => {
   e.preventDefault();
@@ -13,76 +17,114 @@ function ago(iso) {
   if (secs < 60) return "just now";
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-  return `${Math.floor(secs / 86400)}d ago`;
+  if (secs < 604800) return `${Math.floor(secs / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function empty(text) {
-  const div = document.createElement("div");
-  div.className = "empty";
-  div.textContent = text;
-  body.replaceChildren(div);
+const el = (tag, cls, text) => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+/** Empty states that say what to do, rather than just that there's nothing. */
+function empty(title, detail, action) {
+  const box = el("div", "empty");
+  box.append(el("b", null, title), el("span", null, detail));
+  if (action) {
+    const button = el("button", null, action.label);
+    button.addEventListener("click", action.run);
+    box.append(button);
+  }
+  list.replaceChildren(box);
+  searchWrap.hidden = true;
 }
 
-function line(className, text) {
-  const el = document.createElement("span");
-  el.className = className;
-  el.textContent = text;
-  return el;
-}
+function render(filter = "") {
+  const needle = filter.trim().toLowerCase();
+  const shown = needle
+    ? rows.filter((r) =>
+        (r.subject ?? "").toLowerCase().includes(needle) ||
+        (r.recipients ?? []).join(" ").toLowerCase().includes(needle))
+    : rows;
 
-function render(rows) {
-  if (!rows.length) {
-    empty("Nothing tracked yet. Compose a message in Gmail and Kilroy will pick it up.");
+  if (!shown.length) {
+    const box = el("div", "empty");
+    box.append(el("b", null, needle ? "No matches" : "Nothing tracked yet"));
+    box.append(el("span", null, needle
+      ? "Try a different subject or address."
+      : "Compose a message in Gmail — Kilroy picks it up automatically."));
+    list.replaceChildren(box);
     return;
   }
 
-  const list = document.createElement("ul");
+  const frag = document.createDocumentFragment();
 
-  for (const row of rows) {
-    const item = document.createElement("li");
+  for (const row of shown) {
+    const item = el("div", "row");
+    item.append(el("div", "subject", row.subject || "(no subject)"));
+    item.append(el("div", "to", (row.recipients ?? []).join(", ") || "—"));
 
-    const subject = document.createElement("div");
-    subject.className = "subject";
-    subject.textContent = row.subject || "(no subject)";
-
-    const to = document.createElement("div");
-    to.className = "to";
-    to.textContent = (row.recipients ?? []).join(", ") || "—";
-
-    const stat = document.createElement("div");
-    stat.className = "stat";
-
+    const meta = el("div", "meta");
     const opens = Number(row.open_count ?? 0);
     const prefetches = Number(row.prefetch_count ?? 0);
     const clicks = Number(row.click_count ?? 0);
 
     if (opens > 0) {
-      stat.append(line("opened", `✓✓ ${opens} open${opens === 1 ? "" : "s"}`));
-      stat.append(line("cold", `first ${ago(row.first_open_at)}`));
+      meta.append(el("span", "pill open", `${opens} open${opens === 1 ? "" : "s"}`));
+      meta.append(el("span", "when", `first ${ago(row.first_open_at)}`));
     } else if (prefetches > 0) {
-      stat.append(line("machine", "✓ machine fetch only"));
+      meta.append(el("span", "pill machine", "machine fetch only"));
     } else {
-      stat.append(line("cold", "✓ sent, not opened"));
+      meta.append(el("span", "pill", "not opened"));
     }
 
-    if (clicks > 0) stat.append(line("opened", `${clicks} click${clicks === 1 ? "" : "s"}`));
-    stat.append(line("cold", `sent ${ago(row.sent_at)}`));
+    if (clicks > 0) meta.append(el("span", "pill open", `${clicks} click${clicks === 1 ? "" : "s"}`));
+    meta.append(el("span", "when", `sent ${ago(row.sent_at)}`));
+    item.append(meta);
 
-    item.append(subject, to, stat);
-    list.append(item);
+    // Kilroy only learns a thread id once you've viewed the thread since
+    // sending, so older messages may not be clickable. Say so rather than
+    // offering a link that goes nowhere.
+    if (row.thread_id) {
+      item.title = "Open this thread in Gmail";
+      item.addEventListener("click", () => {
+        chrome.tabs.create({ url: `https://mail.google.com/mail/u/0/#all/${row.thread_id}` });
+      });
+    } else {
+      item.dataset.nothread = "true";
+      item.title = "Open this thread in Gmail once to link it here";
+    }
+
+    frag.append(item);
   }
 
-  body.replaceChildren(list);
+  list.replaceChildren(frag);
 }
 
+q.addEventListener("input", () => render(q.value));
+
 (async () => {
-  if (!(await api.getConfig())) return empty("Open Settings and point Kilroy at your Supabase project.");
-  if (!(await api.whoAmI())) return empty("Open Settings and sign in.");
+  if (!(await api.getConfig())) {
+    return empty("Not set up yet", "Point Kilroy at your Supabase project to get started.",
+      { label: "Open settings", run: () => chrome.runtime.openOptionsPage() });
+  }
+  if (!(await api.whoAmI())) {
+    return empty("Signed out", "Sign in to see which of your messages have been opened.",
+      { label: "Sign in", run: () => chrome.runtime.openOptionsPage() });
+  }
 
   try {
-    const rows = await api.rest("message_stats?select=*&order=sent_at.desc&limit=30");
-    render(rows ?? []);
+    rows = await api.rest("message_stats?select=*&order=sent_at.desc&limit=100") ?? [];
+    if (!rows.length) {
+      return empty("Nothing tracked yet",
+        "Compose a message in Gmail — Kilroy picks it up automatically.");
+    }
+    searchWrap.hidden = rows.length < 8;  // a filter over five rows is clutter
+    render();
   } catch (err) {
-    empty(err.message);
+    empty("Couldn't load", err.message,
+      { label: "Open settings", run: () => chrome.runtime.openOptionsPage() });
   }
 })();
