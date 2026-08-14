@@ -419,21 +419,21 @@
   }
 
   /**
-   * Gmail's hex thread id — the only one that also appears on thread-list rows,
-   * and therefore the only way a list badge can find its message. The id in the
-   * URL is an unrelated opaque permalink; see migration 0003.
+   * Gmail's hex id for the message this pixel is embedded in.
    *
-   * Scoped to the pixel's own ancestors on purpose. A document-wide search would
-   * happily return a neighbouring row's id when the list and a thread are on
-   * screen together, which is exactly how you get a badge on the wrong message.
+   * Measured, after 0003 assumed the thread id and captured nothing 8 times out
+   * of 8: the thread view carries no data-legacy-thread-id anywhere. What it does
+   * carry is data-legacy-message-id, on an ancestor of the pixel. Every
+   * thread-level id in the document belongs to a list row rendered alongside, and
+   * none of those contains the pixel — which is exactly why this reads only from
+   * ancestors. A document-wide search would return a neighbouring thread's id and
+   * badge the wrong message with total confidence.
+   *
+   * See 0004 for why a message id is enough to find a list row.
    */
-  function legacyThreadIdFor(img) {
-    const onAncestor = img.closest("[data-legacy-thread-id]");
-    if (onAncestor) return onAncestor.getAttribute("data-legacy-thread-id");
-
-    const item = img.closest('[role="listitem"]');
-    return item?.querySelector("[data-legacy-thread-id]")
-      ?.getAttribute("data-legacy-thread-id") ?? null;
+  function legacyMessageIdFor(img) {
+    return img.closest("[data-legacy-message-id]")
+      ?.getAttribute("data-legacy-message-id") ?? null;
   }
 
   /** Who sent the message this pixel belongs to. */
@@ -565,16 +565,22 @@
     const claiming = document.hasFocus() && fresh.length;
     if (claiming) fresh.forEach((token) => claimed.add(token));
 
-    // Every rendered pixel here belongs to the thread on screen, so one lookup
-    // serves them all.
-    const legacyThreadId = legacyThreadIdFor(rendered.get(tokens[0])) ?? null;
+    // Per-message, so each token reports its own id rather than borrowing the
+    // first one's.
+    const legacyIds = new Map(
+      tokens.map((token) => [token, legacyMessageIdFor(rendered.get(token))]),
+    );
 
     // Both at once. These used to run in series, which doubled the wait for no
     // benefit: note_self_view reaches back a few seconds to reclassify, so it
     // doesn't need to land before the read to stay correct.
     const [, stats] = await Promise.all([
       claiming
-        ? ask("selfView", { tokens: fresh, threadId: currentThreadId(), legacyThreadId })
+        ? ask("selfView", {
+            tokens: fresh,
+            threadId: currentThreadId(),
+            legacyIds: Object.fromEntries(fresh.map((t) => [t, legacyIds.get(t) ?? null])),
+          })
         : Promise.resolve(null),
       ask("stats", { tokens }),
     ]);
@@ -613,29 +619,36 @@
   }
 
   async function paintListBadges() {
-    const rows = new Map();
+    // Two candidate ids per row: the thread's own (which is its first message's)
+    // and its newest message's. Our message matches one or the other depending on
+    // whether it started the thread or replied to it — see migration 0004.
+    const rows = [];
     for (const tr of document.querySelectorAll('tr[role="row"]')) {
-      const id = tr.querySelector("[data-legacy-thread-id]")
-        ?.getAttribute("data-legacy-thread-id");
-      if (id) rows.set(id, tr);
+      const span = tr.querySelector("[data-legacy-thread-id]");
+      if (!span) continue;
+      const ids = [
+        span.getAttribute("data-legacy-thread-id"),
+        span.getAttribute("data-legacy-last-message-id"),
+      ].filter(Boolean);
+      if (ids.length) rows.push({ tr, span, ids });
     }
-    if (!rows.size) return;
+    if (!rows.length) return;
 
-    const unknown = [...rows.keys()].filter((id) => !listStats.has(id));
+    const wanted = [...new Set(rows.flatMap((r) => r.ids))];
+    const unknown = wanted.filter((id) => !listStats.has(id));
+
     if (unknown.length && Date.now() - lastListFetch > 5_000) {
       lastListFetch = Date.now();
       const res = await ask("statsByThreads", { legacyIds: unknown });
       if (res.ok) {
-        for (const row of res.rows ?? []) listStats.set(row.legacy_thread_id, row);
+        for (const row of res.rows ?? []) listStats.set(row.legacy_message_id, row);
         for (const id of unknown) if (!listStats.has(id)) listStats.set(id, null);
       }
     }
 
-    for (const [id, tr] of rows) {
-      const row = listStats.get(id);
-      if (!row) continue;
-      const host = tr.querySelector("[data-legacy-thread-id]")?.parentElement;
-      if (host) paintRowBadge(host, row);
+    for (const { span, ids } of rows) {
+      const match = ids.map((id) => listStats.get(id)).find(Boolean);
+      if (match && span.parentElement) paintRowBadge(span.parentElement, match);
     }
   }
 
