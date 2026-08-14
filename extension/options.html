@@ -4,106 +4,109 @@
 <meta charset="utf-8">
 <title>Kilroy setup</title>
 <style>
+  /* Same palette roles and values as the popup and dashboard, so the three
+     pages read as one product rather than three. */
   :root {
-    color-scheme: light dark;
-    --bg: #fbfbfa; --card: #fff; --fg: #1f1f1f; --muted: #6b6b6b;
-    --line: #e4e4e2; --accent: #1a73e8; --ok: #137333; --bad: #c5221f;
-    --warn: #b06000; --field: #fff;
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --text: #0b0b0b; --text-2: #52514e;
+    --muted: #898781; --border: rgba(11,11,11,0.10); --series: #2a78d6;
+    --good: #0ca30c; --critical: #d03b3b; --warning: #fab219;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #17181a; --card: #202124; --fg: #e8eaed; --muted: #9aa0a6;
-      --line: #33363a; --accent: #8ab4f8; --ok: #81c995; --bad: #f28b82;
-      --warn: #fdd663; --field: #292a2d;
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --text: #ffffff; --text-2: #c3c2b7;
+      --muted: #898781; --border: rgba(255,255,255,0.10); --series: #3987e5;
+      --good: #0ca30c; --critical: #d03b3b; --warning: #fab219;
     }
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 44px 24px 90px; background: var(--bg); color: var(--fg);
+    margin: 0; padding: 44px 24px 90px; background: var(--page); color: var(--text);
     font: 14px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   }
   main { max-width: 680px; margin: 0 auto; }
 
   .head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
   .mark {
-    width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+    width: 30px; height: 30px; border-radius: 50%; background: var(--series);
     color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px;
   }
   @media (prefers-color-scheme: dark) { .mark { color: #202124; } }
   h1 { font-size: 21px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
-  .lede { color: var(--muted); margin: 0 0 30px 42px; }
+  .lede { color: var(--text-2); margin: 0 0 30px 42px; }
 
   .step {
-    position: relative; padding: 0 0 22px 42px; border-left: 2px solid var(--line);
+    position: relative; padding: 0 0 22px 42px; border-left: 2px solid var(--border);
     margin-left: 14px;
   }
   .step:last-of-type { border-left-color: transparent; }
   .dot {
     position: absolute; left: -11px; top: 1px; width: 20px; height: 20px;
-    border-radius: 50%; border: 2px solid var(--line); background: var(--bg);
+    border-radius: 50%; border: 2px solid var(--border); background: var(--page);
     display: grid; place-items: center; font-size: 11px; font-weight: 700;
-    color: var(--muted);
+    color: var(--text-2);
   }
-  .step[data-state="ok"]   .dot { border-color: var(--ok);  color: var(--ok);  }
-  .step[data-state="bad"]  .dot { border-color: var(--bad); color: var(--bad); }
-  .step[data-state="busy"] .dot { border-color: var(--accent); color: var(--accent); }
+  .step[data-state="ok"]   .dot { border-color: var(--good);  color: var(--good);  }
+  .step[data-state="bad"]  .dot { border-color: var(--critical); color: var(--critical); }
+  .step[data-state="busy"] .dot { border-color: var(--series); color: var(--series); }
   .step[data-state="wait"] .dot { opacity: .45; }
 
   .step h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
-  .status { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
-  .step[data-state="ok"]  .status { color: var(--ok); }
-  .step[data-state="bad"] .status { color: var(--bad); }
-  .step[data-state="wait"] .status { color: var(--muted); }
+  .status { margin: 0 0 10px; font-size: 13px; color: var(--text-2); }
+  .step[data-state="ok"]  .status { color: var(--good); }
+  .step[data-state="bad"] .status { color: var(--critical); }
+  .step[data-state="wait"] .status { color: var(--text-2); }
   .step[data-state="wait"] .body { opacity: .5; }
 
-  .body { background: var(--card); border: 1px solid var(--line);
+  .body { background: var(--surface); border: 1px solid var(--border);
           border-radius: 10px; padding: 16px; margin-top: 10px; }
 
   label { display: block; font-weight: 500; margin: 10px 0 4px; font-size: 13px; }
   label:first-child { margin-top: 0; }
   input[type=text], input[type=email], input[type=password] {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
-    background: var(--field); color: var(--fg); font: inherit; font-size: 13px;
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--page); color: var(--text); font: inherit; font-size: 13px;
   }
-  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  small { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; }
+  input:focus { outline: 2px solid var(--series); outline-offset: -1px; }
+  small { display: block; color: var(--text-2); font-size: 12px; margin-top: 6px; }
 
   button {
-    padding: 8px 15px; border: 0; border-radius: 6px; background: var(--accent);
+    padding: 8px 15px; border: 0; border-radius: 6px; background: var(--series);
     color: #fff; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
   }
   @media (prefers-color-scheme: dark) { button { color: #202124; } }
-  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button.ghost { background: transparent; color: var(--series); border: 1px solid var(--border); }
   button:disabled { opacity: .5; cursor: default; }
   .actions { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
 
   .copyrow { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   code.url {
-    flex: 1; background: var(--field); border: 1px solid var(--line); border-radius: 6px;
+    flex: 1; background: var(--page); border: 1px solid var(--border); border-radius: 6px;
     padding: 7px 10px; font-family: ui-monospace, Menlo, Consolas, monospace;
     font-size: 12px; overflow-x: auto; white-space: nowrap;
   }
   code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;
-         background: var(--field); padding: 1px 4px; border-radius: 3px; }
+         background: var(--page); padding: 1px 4px; border-radius: 3px; }
 
-  ol.mini { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  ol.mini { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--text-2); }
   ol.mini li { margin-bottom: 5px; }
-  a { color: var(--accent); }
+  a { color: var(--series); }
 
   .toggle { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; }
   .toggle input { margin-top: 3px; width: 15px; height: 15px; flex: none; }
   .toggle b { font-weight: 500; font-size: 13px; }
 
   .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
-  .msg.bad { color: var(--bad); }
-  .msg.ok  { color: var(--ok); }
+  .msg.bad { color: var(--critical); }
+  .msg.ok  { color: var(--good); }
 
   .bar {
-    position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
-    border-top: 1px solid var(--line); padding: 12px 24px;
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface);
+    border-top: 1px solid var(--border); padding: 12px 24px;
     display: flex; justify-content: center; gap: 12px; align-items: center;
   }
-  .bar .summary { font-size: 13px; color: var(--muted); }
+  .bar .summary { font-size: 13px; color: var(--text-2); }
 </style>
 </head>
 <body>
@@ -199,7 +202,7 @@ supabase functions deploy r  --no-verify-jwt</code>
         <button id="google">Sign in with Google</button>
         <small>Uses the Google account you already have — no new password to invent or lose.</small>
         <details style="margin-top:14px;">
-          <summary style="cursor:pointer;font-size:13px;color:var(--muted);">
+          <summary style="cursor:pointer;font-size:13px;color:var(--text-2);">
             Use an email and password instead
           </summary>
           <label for="email">Email</label>
@@ -245,7 +248,7 @@ supabase functions deploy r  --no-verify-jwt</code>
     </div>
   </section>
 
-  <p style="color:var(--muted);font-size:12.5px;margin-left:42px;">
+  <p style="color:var(--text-2);font-size:12.5px;margin-left:42px;">
     Opens are inferred from images being fetched, and plenty of things fetch images that
     aren't people. <code>docs/ACCURACY.md</code> explains what each number can and can't
     support.

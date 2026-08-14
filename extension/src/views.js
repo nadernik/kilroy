@@ -299,8 +299,78 @@ export function renderTable(host, rows, onSelect) {
   }
 }
 
-/** The raw classification history for one message. */
-export function renderDetail(inner, events, error) {
+// Who actually made the request, in words. The distinction that matters is
+// whether a human triggered it, so each entry says that outright.
+const PROXIES = {
+  google: {
+    who: "Google's image proxy",
+    note: "Gmail fetches every image itself, so this arrived on the recipient's behalf. The address below is Google's, not theirs.",
+    automated: false,
+  },
+  apple: {
+    who: "Apple Mail Privacy Protection relay",
+    note: "Apple prefetches images on delivery whether or not anyone opens the message, and hides the real client behind a relay.",
+    automated: true,
+  },
+  microsoft: {
+    who: "Microsoft / Outlook prefetch",
+    note: "Outlook and Bing fetch images ahead of a reader in some configurations.",
+    automated: true,
+  },
+  yahoo: {
+    who: "Yahoo's mail proxy",
+    note: "Fetched on the recipient's behalf; the address below is Yahoo's.",
+    automated: false,
+  },
+  scanner: {
+    who: "A security scanner or mail gateway",
+    note: "Gateways open every image and link on arrival to check for malware. No person was involved.",
+    automated: true,
+  },
+};
+
+const DIRECT = {
+  who: "The mail client directly",
+  note: "No proxy was detected, so the address below may genuinely be the reader's — the only case where it means anything.",
+  automated: false,
+};
+
+const VERDICTS = {
+  open: "Counted as a genuine open",
+  prefetch: "Not counted — looks automated",
+  self: "Not counted — this was you",
+  dup: "Not counted — folded into the hit just before it",
+};
+
+/**
+ * Attribution is the honest weak point. One pixel is embedded in one message
+ * body, and every recipient receives the same body — so a fetch identifies the
+ * message, never which recipient triggered it. With a single recipient that's
+ * the same thing; past one it isn't, and saying otherwise would be a guess
+ * dressed as data.
+ */
+function attribute(message) {
+  const to = message?.recipients ?? [];
+  if (to.length === 1) return { text: to[0], hint: null };
+  if (to.length > 1) {
+    return {
+      text: `Can't be attributed`,
+      hint: `All ${to.length} recipients share one pixel, so a fetch can't say which of them it was.`,
+    };
+  }
+  return { text: "Unknown", hint: null };
+}
+
+function metaRow(label, value, hint) {
+  const dt = el("dt", null, label);
+  const dd = el("dd");
+  dd.append(el("span", null, value));
+  if (hint) dd.append(el("span", "hint", hint));
+  return [dt, dd];
+}
+
+/** The raw classification history for one message, annotated. */
+export function renderDetail(inner, events, message, error) {
   inner.replaceChildren(el("h3", null, "Every fetch recorded"));
 
   if (error) { inner.append(el("p", "dim", error)); return; }
@@ -309,13 +379,43 @@ export function renderDetail(inner, events, error) {
     return;
   }
 
+  const who = attribute(message);
+
   for (const e of events) {
-    const line = el("div", "ev");
-    line.append(el("span", "t", fmtDate(e.opened_at)));
-    const wrap = el("span");
-    wrap.append(el("span", `pill ${e.classification}`, e.classification));
-    line.append(wrap);
-    line.append(el("span", "r", e.reason ?? (e.proxy ? `via ${e.proxy}` : "counted")));
-    inner.append(line);
+    const source = PROXIES[e.proxy] ?? DIRECT;
+    const automated = source.automated || e.classification === "prefetch";
+
+    const block = el("div", "ev");
+
+    const head = el("div", "ev-head");
+    head.append(el("span", "t", fmtDate(e.opened_at)));
+    head.append(el("span", `pill ${e.classification}`, e.classification));
+    head.append(el("span", "verdict", VERDICTS[e.classification] ?? e.classification));
+    block.append(head);
+
+    const meta = el("dl", "ev-meta");
+    meta.append(...metaRow("Fetched by", source.who, source.note));
+    meta.append(...metaRow(
+      "Automated?",
+      automated ? "Almost certainly — no reader implied" : "Consistent with a person opening it",
+      e.reason ?? null,
+    ));
+    meta.append(...metaRow("Recipient", who.text, who.hint));
+    if (e.ip) {
+      meta.append(...metaRow(
+        "Address",
+        e.ip,
+        e.proxy ? `${source.who} — not the recipient's own address.` : null,
+      ));
+    }
+    if (e.user_agent) {
+      const dt = el("dt", null, "Client");
+      const dd = el("dd");
+      dd.append(el("span", "ua", e.user_agent));
+      meta.append(dt, dd);
+    }
+    block.append(meta);
+
+    inner.append(block);
   }
 }

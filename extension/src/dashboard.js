@@ -54,18 +54,18 @@ async function selectRow(tr, message) {
   row.append(cell);
   tr.after(row);
 
-  views.renderDetail(inner, [], "Loading…");
+  views.renderDetail(inner, [], message, "Loading…");
 
   try {
     const data = await api.rest(
-      `messages?select=opens(opened_at,classification,reason,proxy)` +
+      `messages?select=opens(opened_at,classification,reason,proxy,ip,user_agent)` +
       `&token=eq.${encodeURIComponent(message.token)}`,
     );
     const events = (data?.[0]?.opens ?? [])
       .sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at));
-    views.renderDetail(inner, events);
+    views.renderDetail(inner, events, message);
   } catch (err) {
-    views.renderDetail(inner, [], err.message);
+    views.renderDetail(inner, [], message, err.message);
   }
 }
 

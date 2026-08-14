@@ -3,19 +3,22 @@
    ignorable at a glance and readable when you look straight at it. Detail
    belongs in the tooltip, not on screen. */
 
-/* Compose-window toggle: a 20px "K" disc beside Send. */
+/* Compose-window toggle.
+   A bare mark can't say whether it's on, so the state is spelled out. The dot is
+   a placeholder for a real logo — swap it without touching the layout. */
 .kilroy-chip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px;
   margin: 0 8px;
   border: 1px solid #dadce0;
-  border-radius: 50%;
-  background: transparent;
-  color: #80868b;
-  font: 700 11px/1 "Google Sans", Roboto, Arial, sans-serif;
+  border-radius: 13px;
+  background: #fff;
+  color: #5f6368;
+  font: 500 12px/1 "Google Sans", Roboto, Arial, sans-serif;
+  white-space: nowrap;
   cursor: pointer;
   user-select: none;
   vertical-align: middle;
@@ -23,15 +26,25 @@
   transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
 }
 
-.kilroy-chip:hover { border-color: #9aa0a6; color: #5f6368; }
+.kilroy-chip:hover { background: #f1f3f4; border-color: #9aa0a6; }
+.kilroy-chip:focus-visible { outline: 2px solid #1a73e8; outline-offset: 1px; }
 
-.kilroy-chip[data-armed="true"] {
-  background: #1a73e8;
-  border-color: #1a73e8;
-  color: #fff;
+.kilroy-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #bdc1c6;
+  flex: none;
 }
 
-.kilroy-chip[data-armed="true"]:hover { background: #1765cc; }
+.kilroy-chip[data-armed="true"] {
+  background: #e8f0fe;
+  border-color: #a8c7fa;
+  color: #1967d2;
+}
+
+.kilroy-chip[data-armed="true"] .kilroy-chip__dot { background: #1a73e8; }
+.kilroy-chip[data-armed="true"]:hover { background: #d7e5fd; }
 
 /* Open-count marker on a sent message. */
 .kilroy-badge {
@@ -59,13 +72,16 @@
 .kilroy-badge[data-state="prefetch"] { background: #fef7e0; color: #b06000; }
 
 @media (prefers-color-scheme: dark) {
-  .kilroy-chip { border-color: #5f6368; color: #9aa0a6; }
-  .kilroy-chip:hover { border-color: #9aa0a6; color: #e8eaed; }
+  .kilroy-chip { background: #202124; border-color: #5f6368; color: #bdc1c6; }
+  .kilroy-chip:hover { background: #292a2d; border-color: #9aa0a6; }
+  .kilroy-chip__dot { background: #5f6368; }
   .kilroy-chip[data-armed="true"] {
-    background: #8ab4f8;
-    border-color: #8ab4f8;
-    color: #202124;
+    background: #1f3047;
+    border-color: #3b5b8c;
+    color: #8ab4f8;
   }
+  .kilroy-chip[data-armed="true"]:hover { background: #24395a; }
+  .kilroy-chip[data-armed="true"] .kilroy-chip__dot { background: #8ab4f8; }
   .kilroy-badge { background: #2a2b2e; color: #9aa0a6; }
   .kilroy-badge[data-state="opened"]   { background: #1e3a29; color: #81c995; }
   .kilroy-badge[data-state="prefetch"] { background: #3d3320; color: #fdd663; }

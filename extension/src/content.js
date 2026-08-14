@@ -159,20 +159,40 @@
 
     const chip = document.createElement("div");
     chip.className = "kilroy-chip";
-    chip.setAttribute("role", "button");
+    // A switch, not a button: it has an on/off state, and screen readers should
+    // say so rather than announcing a press.
+    chip.setAttribute("role", "switch");
     chip.setAttribute("tabindex", "0");
-    chip.textContent = "K";  // stands in for a real mark later
 
-    send.parentElement.insertBefore(chip, send.nextSibling);
+    const dot = document.createElement("span");
+    dot.className = "kilroy-chip__dot";
+    const label = document.createElement("span");
+    label.className = "kilroy-chip__label";
+    chip.append(dot, label);
+
+    // Append rather than insert after Send. Send and its dropdown caret live in
+    // the same wrapper, and inserting straight after the button dropped the chip
+    // between the two — which read as part of a broken split-button.
+    send.parentElement.appendChild(chip);
+
+    chip.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chip.click(); }
+    });
+
     return chip;
   }
 
   function paintChip(chip, armed, note) {
     if (!chip) return;
     chip.dataset.armed = String(armed);
+    chip.setAttribute("aria-checked", String(armed));
+    chip.querySelector(".kilroy-chip__label").textContent = armed ? "Tracking" : "Not tracked";
+    chip.setAttribute("aria-label", armed
+      ? "Kilroy tracking on for this message"
+      : "Kilroy tracking off for this message");
     chip.title = note ?? (armed
-      ? "Kilroy is tracking this message. Click to turn off."
-      : "Kilroy is not tracking this message. Click to turn on.");
+      ? "Kilroy will record when this message is opened. Click to turn off."
+      : "This message won't be tracked. Click to turn on.");
   }
 
   /**
