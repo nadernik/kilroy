@@ -38,6 +38,7 @@
   header .sp { flex: 1; }
   header a { color: var(--series); text-decoration: none; font-size: 12px; }
   header a:hover { text-decoration: underline; }
+  header a + a { margin-left: 12px; }
 
   .search { padding: 9px 14px; border-bottom: 1px solid var(--border); }
   .search input {
@@ -85,6 +86,7 @@
     <div class="mark">K</div>
     <b>Kilroy</b>
     <span class="sp"></span>
+    <a href="#" id="dash">Dashboard</a>
     <a href="#" id="settings">Settings</a>
   </header>
   <div class="search" id="searchWrap" hidden>

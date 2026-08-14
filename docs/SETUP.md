@@ -138,9 +138,15 @@ working is the difference between a useful tracker and a noise generator.
 
 ## 8. The dashboard
 
-`dashboard/index.html` is a single file with no build step and no dependencies.
-Open it straight from disk, or host it anywhere static (Cloudflare Pages, GitHub
-Pages, Vercel — all free). Enter the same URL, anon key, and login.
+Click the Kilroy icon → **Dashboard**. It opens in a tab, inside the extension,
+and reuses the session you already signed in with — there is nothing further to
+configure or log into.
+
+It shows opens per day, opens by recipient, and a table of every tracked message.
+Click any row to expand the raw classification history: every fetch recorded for
+that message and which rule counted or discounted it. That view is the fastest
+way to answer "why didn't this register as an open?" without opening the SQL
+editor.
 
 ---
 

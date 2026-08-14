@@ -11,6 +11,11 @@ document.getElementById("settings").addEventListener("click", (e) => {
   chrome.runtime.openOptionsPage();
 });
 
+document.getElementById("dash").addEventListener("click", (e) => {
+  e.preventDefault();
+  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+});
+
 function ago(iso) {
   if (!iso) return "";
   const secs = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);

@@ -40,9 +40,16 @@ supabase/
   migrations/0001_init.sql   schema, RLS, and the three endpoint functions
   functions/px/              serves the pixel, logs and classifies the open
   functions/r/               validates a link token and redirects
-extension/                   MV3 Chrome extension — the Gmail half
-dashboard/index.html         single-file dashboard, no build, no host required
+extension/
+  src/content.js             the Gmail half — compose hooks, badges, self-view
+  src/views.js               charts and tables, free of chrome.* so it's testable
+  dashboard.html             full-page dashboard, inside the extension
+  options.html               setup wizard that validates each step
 ```
+
+There is no separate web app. The dashboard lives in the extension and reuses its
+session, because a tracker for one Gmail account asking you to sign in twice is
+not a design, it's an apology.
 
 No npm, no bundler, no lockfile. The Supabase client is ~40 lines of `fetch` in
 [`extension/src/api.js`](extension/src/api.js) because that is all it needed to
