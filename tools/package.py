@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""
+Build a Chrome Web Store upload from extension/.
+
+Two things must happen to the source before it can be published, and both
+are silent failures if forgotten:
+
+  config.local.json   holds YOUR project URL and publishable key. Shipping it
+                      would point every installer at your Supabase project,
+                      where — since the Google provider is open — they could
+                      sign in, occupy your free tier, and route their pixel
+                      traffic through your Edge Functions.
+
+  manifest "key"      pins the extension ID for unpacked installs. The store
+                      issues its own ID, so the field is meaningless there and
+                      is stripped rather than left to be ignored.
+
+Neither is a thing to remember by hand, so this refuses to produce a zip it
+is not sure about: it scans every staged file for key material and fails on a
+match, rather than trusting the deny list above it.
+
+    python tools/package.py
+"""
+import json, re, shutil, sys, tempfile, zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC, DIST = ROOT / "extension", ROOT / "dist"
+
+# Staged outside the repo on purpose. This tree lives in Dropbox, which
+# opens handles on files the moment they appear — and then cleanup fails
+# with a sharing violation on a build that otherwise succeeded.
+STAGE = Path(tempfile.mkdtemp(prefix="kilroy-pkg-"))
+
+# Never ship. Names, not paths — a stray copy anywhere is still a leak.
+EXCLUDE_NAMES = {"config.local.json", "config.local.js", "_preview.html"}
+EXCLUDE_SUFFIX = {".pem", ".key", ".zip", ".log"}
+
+# Anything that looks like credential material, checked against the staged
+# tree as a backstop to the exclusions above.
+SECRETS = re.compile(
+    r"sb_publishable_[A-Za-z0-9._-]{10,}"
+    r"|sb_secret_[A-Za-z0-9._-]{10,}"
+    r"|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}"
+    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----"
+)
+
+REQUIRED_ICONS = ("16", "32", "48", "128")
+
+
+def fail(msg):
+    print(f"REFUSED: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def keep(path: Path) -> bool:
+    return path.name not in EXCLUDE_NAMES and path.suffix.lower() not in EXCLUDE_SUFFIX
+
+
+# ---------------------------------------------------------------- stage --
+DIST.mkdir(parents=True, exist_ok=True)
+
+staged = []
+for src in sorted(p for p in SRC.rglob("*") if p.is_file()):
+    if not keep(src):
+        print(f"  excluded  {src.relative_to(ROOT)}")
+        continue
+    dst = STAGE / src.relative_to(SRC)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    staged.append(dst)
+
+# ------------------------------------------------------------- manifest --
+mpath = STAGE / "manifest.json"
+if not mpath.exists():
+    fail("no manifest.json in the staged tree")
+manifest = json.loads(mpath.read_text(encoding="utf-8"))
+
+had_key = manifest.pop("key", None) is not None
+mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+print(f"  manifest  key stripped: {had_key}")
+
+version = manifest.get("version", "0.0.0")
+
+# --------------------------------------------------------------- verify --
+for size in REQUIRED_ICONS:
+    ref = manifest.get("icons", {}).get(size)
+    if not ref:
+        fail(f"manifest declares no {size}px icon (the store requires 128)")
+    if not (STAGE / ref).exists():
+        fail(f"icon missing from the package: {ref}")
+
+for path in staged:
+    if not path.exists():
+        continue
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, ValueError):
+        continue  # binary, e.g. the icons
+    found = SECRETS.search(text)
+    if found:
+        fail(f"{path.relative_to(STAGE)} contains what looks like key material: "
+             f"{found.group(0)[:16]}…")
+
+if (STAGE / "config.local.json").exists():
+    fail("config.local.json reached the staged tree")
+
+# ------------------------------------------------------------------ zip --
+out = DIST / f"kilroy-{version}.zip"
+if out.exists():
+    out.unlink()
+with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+    for path in sorted(STAGE.rglob("*")):
+        if path.is_file():
+            z.write(path, path.relative_to(STAGE))
+
+shutil.rmtree(STAGE, ignore_errors=True)
+print(f"\n{out.relative_to(ROOT)}  {out.stat().st_size:,} bytes")
+print("Upload this at https://chrome.google.com/webstore/devconsole")

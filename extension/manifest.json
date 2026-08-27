@@ -1,10 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Kilroy",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "See when your Gmail messages get opened. Runs entirely on your own Supabase project.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzGHz8KGlxY/mLRetpJNMjGPrA2t1IK77qWDQOwlhFCIHeIkOLq+WuhieCOe/fl4J1GBAp0OJTN9hMZQMDzKhmUSY1g0Z+0fAnljAInSGlBBWWPuZ+djFMIdDHkMnGm32CE/1OAWdy5U3gQpXiUU1G11euzqb2P+cznDAcDWlTPf0+2o1v1KvW+frfcpHACswWxldBguQhjoa5XNUbUJ4tbezWNvpsqUVa1YVPi46+b0Zv8Lf9WKadYIi6BMllY94cMPLtlQAEs1W5SYl7Pzhn6A73L43Z6nK6Piz/C09w3vEXOFVG9aiCtwJaGBcd7X+cMbhhc+ODXDr67VRMX2yKQIDAQAB",
-  "permissions": ["storage", "identity"],
+  "permissions": [
+    "storage",
+    "identity"
+  ],
   "host_permissions": [
     "https://mail.google.com/*",
     "https://*.supabase.co/*",
@@ -16,9 +25,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://mail.google.com/*"],
-      "js": ["src/content.js"],
-      "css": ["src/content.css"],
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css"
+      ],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -26,6 +41,12 @@
   "options_page": "options.html",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Kilroy"
+    "default_title": "Kilroy",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   }
 }
