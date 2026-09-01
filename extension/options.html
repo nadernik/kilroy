@@ -199,11 +199,16 @@ supabase functions deploy r  --no-verify-jwt</code>
             <code id="callbackUrl">https://&lt;project&gt;.supabase.co/auth/v1/callback</code>.</li>
       </ol>
       <small>
-        This URL is derived from the extension's ID, and the ID is pinned by the
-        <code>key</code> field in <code>manifest.json</code> — so it is the same on every
-        machine you load this folder on. Whitelist it once and every future install is
-        just a sign-in. Remove that field and Chrome invents a fresh ID per machine,
-        which is what made this a per-computer chore.
+        Add the exact URL shown above — this page fills in the right one for this
+        install. Installed from the Chrome Web Store, an extension's identity is the
+        same for every user, so you whitelist it once and every sign-in works against it.
+      </small>
+      <small>
+        Loading the source unpacked instead? The repo pins that identity across your own
+        machines with a <code>key</code> field in <code>manifest.json</code>. A packaged
+        build drops it — the store assigns its own — so an unpacked copy of a package
+        shows a throwaway per-machine ID. Fine for local testing; whitelist whatever it
+        shows. For anyone else, it is the store's URL that counts.
       </small>
     </div>
   </section>
