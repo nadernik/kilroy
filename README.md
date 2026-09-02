@@ -43,8 +43,11 @@ supabase/
 extension/
   src/content.js             the Gmail half — compose hooks, badges, self-view
   src/views.js               charts and tables, free of chrome.* so it's testable
+  src/mgmt.js                Management-API client for one-click setup
+  src/provision.js           runs the migrations and deploys the functions
+  provision/assets.js        generated: the SQL and function source, bundled
   dashboard.html             full-page dashboard, inside the extension
-  options.html               setup wizard that validates each step
+  options.html               setup wizard — one-click, or manual step by step
 ```
 
 There is no separate web app. The dashboard lives in the extension and reuses its
@@ -57,9 +60,12 @@ be, and it means nothing here rots when a dependency does.
 
 ## Setup
 
-See **[docs/SETUP.md](docs/SETUP.md)**. Roughly fifteen minutes: create a Supabase
-project, run one SQL file, deploy two Edge Functions, load the extension
-unpacked, sign in.
+See **[docs/SETUP.md](docs/SETUP.md)**. The short version: make an empty Supabase
+project, load the extension, paste a Supabase access token, and let Kilroy build
+its own backend — migrations, endpoints, and sign-in — inside that project. A
+couple of minutes, and the token is discarded when it's done. The manual route
+(run the SQL yourself, deploy with the CLI) is still documented for anyone who
+wants it.
 
 ## A note on tracking people
 

@@ -17,6 +17,7 @@
   "host_permissions": [
     "https://mail.google.com/*",
     "https://*.supabase.co/*",
+    "https://api.supabase.com/*",
     "https://ipwho.is/*"
   ],
   "background": {

@@ -1,4 +1,6 @@
 import * as api from "./api.js";
+import * as mgmt from "./mgmt.js";
+import { provision } from "./provision.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -63,6 +65,10 @@ async function runChecks() {
   $("signedIn").hidden = !signedIn;
   $("signedOut").hidden = signedIn;
   if (signedIn) $("who").textContent = (await api.whoAmI())?.email ?? "unknown";
+
+  // Once you're signed in the whole setup is done; the express card is only in
+  // the way. It comes back if you sign out.
+  $("express").hidden = signedIn;
 
   const failed = [schema, functions, auth].filter((c) => !c.ok).length;
   $("summary").textContent = failed === 0
@@ -170,6 +176,95 @@ for (const key of ["trackPixel", "trackLinks"]) {
 }
 
 $("recheck").addEventListener("click", runChecks);
+
+// ---------------------------------------------------------- express setup --
+
+$("showManual").addEventListener("click", (e) => {
+  e.preventDefault();
+  $("manualWrap").hidden = false;
+  $("showManual").parentElement.hidden = true;
+  $("manualWrap").scrollIntoView({ behavior: "smooth" });
+});
+
+$("findProjects").addEventListener("click", async () => {
+  const button = $("findProjects");
+  button.disabled = true;
+  say($("expMsg"), "Reading your projects…");
+  try {
+    await mgmt.setToken($("mgmtToken").value);
+    const projects = await mgmt.listProjects();
+    if (!projects.length) {
+      say($("expMsg"), "No projects on that account yet. Create an empty one first, then try again.", "bad");
+      return;
+    }
+    const select = $("projectPick");
+    select.textContent = "";
+    for (const p of projects) {
+      const opt = document.createElement("option");
+      opt.value = p.ref;
+      // Region and status help tell two similarly-named projects apart, and
+      // flag one that isn't finished spinning up yet.
+      opt.textContent = `${p.name} — ${p.region}${p.status && p.status !== "ACTIVE_HEALTHY" ? ` (${p.status})` : ""}`;
+      select.appendChild(opt);
+    }
+    $("projectPickWrap").hidden = false;
+    say($("expMsg"), "");
+  } catch (err) {
+    say($("expMsg"), err.message, "bad");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("provision").addEventListener("click", async () => {
+  const button = $("provision");
+  button.disabled = true;
+  $("findProjects").disabled = true;
+
+  const list = $("provStatus");
+  list.hidden = false;
+  list.textContent = "";
+  const rows = new Map();
+  const onStep = ({ n, of, label, state, error }) => {
+    let li = rows.get(n);
+    if (!li) { li = document.createElement("li"); list.appendChild(li); rows.set(n, li); }
+    const mark = state === "ok" ? "✓" : state === "bad" ? "✗" : "…";
+    li.textContent = `${mark} ${label}${error ? ` — ${error}` : ""}`;
+    li.style.color = state === "bad" ? "var(--critical)" : state === "ok" ? "var(--good)" : "var(--text-2)";
+  };
+
+  say($("expMsg"), "Setting up… this can take a few seconds per step.");
+  try {
+    await provision($("projectPick").value, onStep);
+    say($("expMsg"), "Backend ready. Create your login to finish.", "ok");
+    $("expLogin").hidden = false;
+    $("expEmail").focus();
+    await loadForm();
+    await runChecks();  // reflect the now-green manual steps too
+  } catch (err) {
+    say($("expMsg"), err.message, "bad");
+    // The token may still be needed for a retry, so it is not cleared on failure.
+    $("findProjects").disabled = false;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("expCreate").addEventListener("click", async () => {
+  const button = $("expCreate");
+  button.disabled = true;
+  say($("expMsg"), "Creating your login…");
+  try {
+    await api.signUp($("expEmail").value.trim(), $("expPass").value);
+    $("expPass").value = "";
+    say($("expMsg"), "All set. Reload Gmail and compose a message — a Tracking chip appears by Send.", "ok");
+    await runChecks();
+  } catch (err) {
+    say($("expMsg"), err.message, "bad");
+  } finally {
+    button.disabled = false;
+  }
+});
 
 (async () => {
   await loadForm();

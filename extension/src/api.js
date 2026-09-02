@@ -220,6 +220,43 @@ export async function signIn(email, password) {
 }
 
 /**
+ * Create the owner account on a freshly provisioned project.
+ *
+ * One-click setup turns on mailer_autoconfirm, so /signup returns a session
+ * immediately with no confirmation email to click — which is the whole point,
+ * since the default Supabase mailer is rate-limited to a trickle and a personal
+ * project has no SMTP configured. A second machine signs in with signIn()
+ * against the same email, lands the same auth.uid(), and sees the same data.
+ *
+ * If the project was NOT auto-confirmed (someone provisioned by hand, or turned
+ * it back off), /signup withholds the session pending a click. We say so rather
+ * than leave the user staring at a form that looked like it worked.
+ */
+export async function signUp(email, password) {
+  const cfg = await requireConfig();
+  const res = await fetch(`${cfg.url}/auth/v1/signup`, {
+    method: "POST",
+    headers: { "content-type": "application/json", apikey: cfg.anonKey },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      data.error_description || data.msg || data.message || `Sign-up failed (${res.status})`,
+    );
+  }
+  if (!data.access_token) {
+    throw new Error(
+      "Account created, but the project wants an email confirmation before it " +
+      "hands over a session. Confirm it, then use Sign in.",
+    );
+  }
+  const session = normalizeSession(data);
+  await store.set({ session });
+  return session;
+}
+
+/**
  * The URL Google will hand the session back to. Supabase must have this in its
  * allowed redirect list or the flow dies at the last step, so the options page
  * shows it for copying rather than making anyone derive it from the

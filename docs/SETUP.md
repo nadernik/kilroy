@@ -2,8 +2,40 @@
 
 About fifteen minutes. Everything here fits inside Supabase's free tier.
 
-You need: a Google account using Gmail on the web, a Supabase account, Chrome (or
-any Chromium browser), and the [Supabase CLI](https://supabase.com/docs/guides/cli).
+You need: a Google account using Gmail on the web, a Supabase account, and Chrome
+(or any Chromium browser). The one-click path below needs no CLI at all; only the
+manual path further down does.
+
+## The quick way: one-click setup
+
+The extension can build the whole backend for you, inside a Supabase project you
+own. No SQL editor, no CLI, no key-copying.
+
+1. **Make an empty Supabase project.** At
+   [supabase.com](https://supabase.com/dashboard/projects) → *New project*, name
+   it, and wait for it to finish provisioning. That is the only step you do in
+   Supabase's dashboard.
+2. **Load the extension.** `chrome://extensions` → Developer mode → *Load
+   unpacked* → the `extension/` folder.
+3. **Create an access token.** Supabase →
+   [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) →
+   generate one, and copy it.
+4. **Open Kilroy's options** (icon → Settings) and, under *Set up in one click*,
+   paste the token → *Find my projects* → pick the project you just made → *Set
+   up Kilroy here*. It runs the migrations, deploys the `px` and `r` endpoints
+   with `verify_jwt` off, and switches on email sign-in.
+5. **Create your login** — an email and password for Kilroy's own database — and
+   you're done. Use the same email on another computer to see the same data.
+
+The access token is used only during setup and is discarded the moment it
+finishes; nothing keeps it and Gmail tracking never uses it. It needs broad
+account access because creating tables and deploying functions genuinely
+requires it — which is also why you generate a fresh one and can revoke it
+afterwards from the same page.
+
+Everything from here down is the **manual** alternative: the same result done by
+hand, worth reading if you want to understand each piece or prefer not to hand
+the extension a token.
 
 ## Already set this up once? Start here
 

@@ -114,6 +114,66 @@
   <div class="head"><div class="mark">K</div><h1>Kilroy</h1></div>
   <p class="lede">Know when your Gmail is opened, using a database only you can read.</p>
 
+  <!-- Express setup -->
+  <section class="express" id="express">
+    <div class="body">
+      <h2 style="margin:0 0 4px;font-size:16px;">Set up in one click</h2>
+      <p style="margin:0;font-size:13px;color:var(--text-2)">
+        Kilroy will create everything inside a Supabase project you own — you never
+        leave this page. First make a free, empty project at
+        <a href="https://supabase.com/dashboard/projects" target="_blank" rel="noopener">supabase.com</a>
+        (New project → name it → wait for it to finish), then paste an access token below.
+      </p>
+
+      <label for="mgmtToken">Supabase access token</label>
+      <div class="copyrow">
+        <input id="mgmtToken" type="password" spellcheck="false" autocomplete="off"
+               placeholder="sbp_…" style="flex:1">
+        <button id="findProjects">Find my projects</button>
+      </div>
+      <small>
+        Create one at
+        <a href="https://supabase.com/dashboard/account/tokens" target="_blank" rel="noopener">Account → Access Tokens</a>.
+        It is used only to set things up and is discarded the moment setup finishes —
+        nothing here keeps it, and Gmail tracking never uses it.
+      </small>
+
+      <div id="projectPickWrap" hidden>
+        <label for="projectPick">Which project?</label>
+        <select id="projectPick" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--page);color:var(--text);font:inherit;font-size:13px"></select>
+        <div class="actions">
+          <button id="provision">Set up Kilroy here</button>
+        </div>
+        <small>Runs the database setup and deploys the two endpoints. Takes under a minute.</small>
+      </div>
+
+      <ol class="mini" id="provStatus" hidden style="margin-top:12px"></ol>
+
+      <div id="expLogin" hidden>
+        <p style="margin:14px 0 0;font-size:13px;font-weight:500">Almost done — create your Kilroy login.</p>
+        <label for="expEmail">Email</label>
+        <input id="expEmail" type="email" autocomplete="username">
+        <label for="expPass">Password</label>
+        <input id="expPass" type="password" autocomplete="new-password">
+        <div class="actions">
+          <button id="expCreate">Create login &amp; finish</button>
+        </div>
+        <small>
+          This is a login for Kilroy's own database, not your Google or Supabase account.
+          Use the same email on another computer to see the same data.
+        </small>
+      </div>
+
+      <div class="msg" id="expMsg"></div>
+
+      <p style="margin:14px 0 0;font-size:12px">
+        <a href="#" id="showManual">Rather set it up by hand?</a>
+      </p>
+    </div>
+  </section>
+
+  <div id="manualWrap" hidden>
+
   <!-- 1 -->
   <section class="step" id="step-project" data-state="busy">
     <div class="dot">1</div>
@@ -242,9 +302,11 @@ supabase functions deploy r  --no-verify-jwt</code>
     </div>
   </section>
 
-  <!-- 6 -->
+  </div><!-- /manualWrap -->
+
+  <!-- Preferences: always available, not part of the numbered setup flow -->
   <section class="step" id="step-prefs" data-state="ok">
-    <div class="dot">6</div>
+    <div class="dot">✓</div>
     <h2>Preferences</h2>
     <p class="status" data-status>Change these any time</p>
     <div class="body">
