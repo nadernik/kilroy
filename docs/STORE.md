@@ -59,7 +59,7 @@ and Kilroy runs the database setup and deploys its endpoints for you. The token
 is used only during setup and discarded afterward. A fully manual setup is
 documented too.
 
-Open source: https://github.com/nadernik/kilroy
+Open source: https://github.com/RelayLabs-apps/kilroy
 
 A note on tracking: open tracking sits in a genuine grey area, and tracking
 recipients in some jurisdictions may require their consent. Kilroy makes it easy
@@ -78,13 +78,13 @@ owns and controls. Everything the extension does serves that one purpose.
 **Privacy policy URL**
 
 ```
-https://github.com/nadernik/kilroy/blob/main/docs/PRIVACY.md
+https://github.com/RelayLabs-apps/kilroy/blob/main/docs/PRIVACY.md
 ```
 
 **Homepage / support URL**
 
 ```
-https://github.com/nadernik/kilroy
+https://github.com/RelayLabs-apps/kilroy
 ```
 
 ---

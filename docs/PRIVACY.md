@@ -79,9 +79,9 @@ machine; removing the extension clears the rest.
 ## Source
 
 Kilroy is open source under the MIT licence:
-<https://github.com/nadernik/kilroy>. Every claim on this page can be checked
+<https://github.com/RelayLabs-apps/kilroy>. Every claim on this page can be checked
 against the code.
 
 ## Contact
 
-Open an issue at <https://github.com/nadernik/kilroy/issues>.
+Open an issue at <https://github.com/RelayLabs-apps/kilroy/issues>.

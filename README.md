@@ -80,4 +80,5 @@ that button exists for a reason.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+Code is MIT — see [LICENSE](LICENSE). The Kilroy name and logo are trademarks of
+Relay Labs and are not covered by that licence; see [TRADEMARK.md](TRADEMARK.md).
