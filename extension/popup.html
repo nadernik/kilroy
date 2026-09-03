@@ -29,11 +29,7 @@
     border-bottom: 1px solid var(--border); position: sticky; top: 0;
     background: var(--surface); z-index: 2;
   }
-  .mark {
-    width: 20px; height: 20px; border-radius: 50%; background: var(--series);
-    color: var(--surface); display: grid; place-items: center;
-    font-weight: 700; font-size: 11px; flex: none;
-  }
+  .mark { width: 22px; height: 22px; display: block; flex: none; }
   header b { font-size: 13px; font-weight: 600; }
   header .sp { flex: 1; }
   header a { color: var(--series); text-decoration: none; font-size: 12px; }
@@ -83,7 +79,7 @@
 </head>
 <body>
   <header>
-    <div class="mark">K</div>
+    <img class="mark" src="icons/icon48.png" alt="Kilroy">
     <b>Kilroy</b>
     <span class="sp"></span>
     <a href="#" id="dash">Dashboard</a>

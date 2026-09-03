@@ -28,11 +28,7 @@
   main { max-width: 680px; margin: 0 auto; }
 
   .head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-  .mark {
-    width: 30px; height: 30px; border-radius: 50%; background: var(--series);
-    color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px;
-  }
-  @media (prefers-color-scheme: dark) { .mark { color: #202124; } }
+  .mark { width: 32px; height: 32px; display: block; }
   h1 { font-size: 21px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
   .lede { color: var(--text-2); margin: 0 0 30px 42px; }
 
@@ -111,7 +107,7 @@
 </head>
 <body>
 <main>
-  <div class="head"><div class="mark">K</div><h1>Kilroy</h1></div>
+  <div class="head"><img class="mark" src="icons/icon48.png" alt="Kilroy"><h1>Kilroy</h1></div>
   <p class="lede">Know when your Gmail is opened, using a database only you can read.</p>
 
   <!-- Express setup -->
